@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=1.5">
-  <title>🗺️ Заброшенные объекты России</title>
+  <title>🗺️ Заброшенные объекты – Карта</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
@@ -25,7 +25,83 @@
       background: #2d2d2d;
     }
 
-    /* Основная кнопка-меню (бургер) слева сверху */
+    .leaflet-control-zoom {
+      display: none !important;
+    }
+
+    /* Кнопки зума справа внизу */
+    .custom-zoom {
+      position: absolute;
+      bottom: 30px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .custom-zoom button {
+      width: 48px;
+      height: 48px;
+      background: rgba(20, 20, 20, 0.9);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 14px;
+      color: #e0e0e0;
+      font-size: 26px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.6);
+      transition: all 0.2s;
+      line-height: 1;
+      user-select: none;
+    }
+    .custom-zoom button:hover {
+      background: #2a2a2a;
+      border-color: rgba(255,255,255,0.4);
+      transform: scale(1.05);
+    }
+    .custom-zoom button:active {
+      transform: scale(0.95);
+      background: #3a3a3a;
+    }
+
+    /* Кнопка геолокации слева внизу */
+    .geolocation-btn {
+      position: absolute;
+      bottom: 30px;
+      left: 20px;
+      z-index: 1000;
+      width: 48px;
+      height: 48px;
+      background: rgba(20, 20, 20, 0.9);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 14px;
+      color: #e0e0e0;
+      font-size: 26px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.6);
+      transition: all 0.2s;
+      line-height: 1;
+      user-select: none;
+    }
+    .geolocation-btn:hover {
+      background: #2a2a2a;
+      border-color: rgba(255,255,255,0.4);
+      transform: scale(1.05);
+    }
+    .geolocation-btn:active {
+      transform: scale(0.95);
+      background: #3a3a3a;
+    }
+
     .main-menu-btn {
       position: absolute;
       top: 15px;
@@ -51,7 +127,6 @@
       border-color: rgba(255,255,255,0.4);
     }
 
-    /* Выпадающая панель меню */
     .menu-panel {
       position: absolute;
       top: 75px;
@@ -65,9 +140,12 @@
       border: 1px solid rgba(255, 255, 255, 0.2);
       display: none;
       flex-direction: column;
-      gap: 12px;
-      min-width: 230px;
+      gap: 8px;
+      min-width: 270px;
+      max-width: 300px;
       color: #e0e0e0;
+      max-height: 80vh;
+      overflow-y: auto;
     }
     .menu-panel.visible {
       display: flex;
@@ -76,14 +154,14 @@
     .menu-btn {
       background: rgba(50, 50, 50, 0.8);
       border: 1px solid rgba(255,255,255,0.15);
-      padding: 12px 16px;
-      border-radius: 14px;
+      padding: 10px 14px;
+      border-radius: 12px;
       font-weight: 600;
-      font-size: 15px;
+      font-size: 14px;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       transition: 0.2s;
       color: #f0f0f0;
       width: 100%;
@@ -103,18 +181,92 @@
     .separator {
       height: 1px;
       background: rgba(255,255,255,0.2);
-      margin: 5px 0;
+      margin: 2px 0;
     }
 
     .section-title {
-      font-size: 13px;
+      font-size: 12px;
       text-transform: uppercase;
       letter-spacing: 1px;
       color: #a0a0a0;
-      margin: 4px 0;
+      margin: 2px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
-    /* Стили для попапов (заброшенная тематика) */
+    .search-container {
+      display: flex;
+      gap: 6px;
+    }
+    .search-container input {
+      flex: 1;
+      background: rgba(40, 40, 40, 0.9);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 10px;
+      padding: 8px 12px;
+      color: #f0f0f0;
+      font-size: 14px;
+      outline: none;
+    }
+    .search-container input::placeholder {
+      color: #888;
+    }
+    .search-container button {
+      background: #2563eb;
+      border: none;
+      border-radius: 10px;
+      padding: 8px 12px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .search-container button:hover {
+      background: #1d4ed8;
+    }
+
+    .search-results {
+      max-height: 150px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .search-result-item {
+      background: rgba(50,50,50,0.7);
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      border: 1px solid transparent;
+      transition: 0.15s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .search-result-item:hover {
+      background: #3d3d3d;
+      border-color: #d97706;
+    }
+    .search-result-item .guard-badge {
+      background: #b45309;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .counter-badge {
+      background: #d97706;
+      color: #000;
+      font-weight: bold;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 13px;
+    }
+
     .abandoned-popup {
       background: #1f1f1f;
       color: #e5e5e5;
@@ -128,12 +280,9 @@
       margin: 0 0 8px;
       font-size: 17px;
       color: #fbbf24;
-      display: flex;
-      align-items: center;
-      gap: 5px;
     }
     .abandoned-popup .coords {
-      font-family: 'Fira Code', monospace;
+      font-family: monospace;
       background: #2d2d2d;
       padding: 6px 10px;
       border-radius: 10px;
@@ -149,23 +298,37 @@
       padding: 8px;
       border-radius: 8px;
     }
-    .abandoned-popup .danger-level {
+    .abandoned-popup .guard-level,
+    .abandoned-popup .status-line {
       font-size: 13px;
       margin: 5px 0;
     }
-    .abandoned-popup button {
-      background: #b91c1c;
+    .abandoned-popup .action-buttons {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .abandoned-popup .action-buttons button {
+      flex: 1;
       border: none;
       color: white;
-      padding: 7px 16px;
+      padding: 7px 12px;
       border-radius: 20px;
       font-weight: bold;
       cursor: pointer;
-      margin-top: 8px;
-      width: 100%;
       transition: 0.2s;
+      font-size: 13px;
     }
-    .abandoned-popup button:hover {
+    .abandoned-popup .edit-btn {
+      background: #2563eb;
+    }
+    .abandoned-popup .edit-btn:hover {
+      background: #1d4ed8;
+    }
+    .abandoned-popup .delete-btn {
+      background: #b91c1c;
+    }
+    .abandoned-popup .delete-btn:hover {
       background: #dc2626;
     }
 
@@ -178,34 +341,104 @@
       background: #1f1f1f;
     }
 
-    /* Индикатор режима на карте */
     .mode-indicator {
       position: absolute;
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.85);
       color: #fbbf24;
-      padding: 6px 18px;
-      border-radius: 20px;
+      padding: 8px 20px;
+      border-radius: 25px;
       font-weight: 600;
       font-size: 14px;
       z-index: 1000;
       display: none;
       border: 1px solid #d97706;
     }
+
+    .layer-btn.active-layer {
+      background: #2563eb;
+      border-color: #3b82f6;
+      color: white;
+      box-shadow: 0 0 12px rgba(59,130,246,0.5);
+    }
+
+    .panorama-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      z-index: 9999;
+      flex-direction: column;
+    }
+    .panorama-modal.active {
+      display: flex;
+    }
+    .panorama-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      background: #1a1a1a;
+      color: white;
+    }
+    .panorama-header button {
+      background: #b91c1c;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    #panoramaFrame {
+      flex: 1;
+      border: none;
+      width: 100%;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.3); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .marker-animate {
+      animation: fadeIn 0.4s ease-out;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
 
-  <!-- Кнопка открытия меню -->
-  <div class="main-menu-btn" id="menuToggleBtn" title="Меню инструментов">☰</div>
+  <!-- Кнопка геолокации слева внизу (отдельно от меню) -->
+  <button class="geolocation-btn" id="geolocationBtn" title="Моё местоположение">📍</button>
 
-  <!-- Выпадающее меню -->
+  <div class="custom-zoom">
+    <button id="zoomInBtn" title="Приблизить">+</button>
+    <button id="zoomOutBtn" title="Отдалить">−</button>
+  </div>
+
+  <div class="main-menu-btn" id="menuToggleBtn" title="Меню">☰</div>
+
   <div class="menu-panel" id="menuPanel">
-    <div class="section-title">🔍 Действия</div>
-    <button id="addMarkerMenuBtn" class="menu-btn">📍 Добавить объект</button>
+    <div class="section-title">
+      <span>🔍 Поиск объектов</span>
+      <span class="counter-badge" id="totalCount">0</span>
+    </div>
+    <div class="search-container">
+      <input type="text" id="searchInput" placeholder="Название или описание...">
+      <button id="searchBtn">🔍</button>
+    </div>
+    <div class="search-results" id="searchResults"></div>
+    
+    <div class="separator"></div>
+    
+    <button id="addMarkerMenuBtn" class="menu-btn">🏚️ Добавить объект</button>
+    <button id="panoramaMenuBtn" class="menu-btn">🌐 Открыть панораму</button>
     
     <div class="separator"></div>
     <div class="section-title">🗺️ Слои карты</div>
@@ -214,143 +447,248 @@
     <button id="layerHybridBtn" class="menu-btn layer-btn">🌐 Гибрид</button>
 
     <div class="separator"></div>
-    <button id="saveMenuBtn" class="menu-btn">💾 Сохранить карту</button>
-    <button id="loadMenuBtn" class="menu-btn">📂 Загрузить карту</button>
-    <input type="file" id="fileInput" accept=".json" style="display: none;">
-    <div style="font-size:12px; color:#888; margin-top:4px;">Тема: заброшенные объекты</div>
+    <button id="saveJsonBtn" class="menu-btn">💾 Сохранить JSON</button>
+    <button id="loadJsonBtn" class="menu-btn">📂 Загрузить JSON</button>
+    <button id="exportKmlBtn" class="menu-btn">📄 Экспорт KML</button>
+    <button id="importKmlBtn" class="menu-btn">📥 Импорт KML</button>
+    <input type="file" id="jsonFileInput" accept=".json" style="display: none;">
+    <input type="file" id="kmlFileInput" accept=".kml" style="display: none;">
   </div>
 
-  <div class="mode-indicator" id="modeIndicator">📍 Режим: добавление метки (кликните по карте)</div>
+  <div class="panorama-modal" id="panoramaModal">
+    <div class="panorama-header">
+      <span style="font-weight:bold; font-size:18px;">🌐 Google Street View</span>
+      <button id="closePanoramaBtn">✕ Закрыть</button>
+    </div>
+    <iframe id="panoramaFrame" allowfullscreen></iframe>
+  </div>
+
+  <div class="mode-indicator" id="modeIndicator">📍 Кликните по карте для добавления объекта</div>
 
   <script>
     (function() {
-      // ---------- Карта с ограничением по России ----------
       const map = L.map('map', {
-        center: [62.0, 94.0],
-        zoom: 3,
-        minZoom: 3,
-        maxZoom: 16,
-        zoomControl: true,
-        maxBounds: L.latLngBounds(
-          L.latLng(41.0, 19.0),   // юго-запад
-          L.latLng(82.0, -169.0)  // северо-восток (с учетом Чукотки)
-        ),
-        maxBoundsViscosity: 1.0
+        center: [55.7558, 37.6173],
+        zoom: 5,
+        minZoom: 2,
+        maxZoom: 19,
+        zoomControl: false,
+        worldCopyJump: false
       });
 
-      // Базовые слои
       const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OSM',
         maxZoom: 19
       });
-      
       const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: '© Esri',
-        maxZoom: 18
+        maxZoom: 19
       });
-      
-      const hybridLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '© Esri',
-        maxZoom: 18
-      });
-      // Для гибрида добавим подписи поверх спутника
       const labelsLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
-        attribution: '© OSM contributors',
-        maxZoom: 18,
+        attribution: '© OSM',
+        maxZoom: 19,
         opacity: 0.7
       });
-
-      // Группа для гибрида
       const hybridGroup = L.layerGroup([satelliteLayer, labelsLayer]);
       
-      // Устанавливаем слой по умолчанию (схема)
       let currentBaseLayer = osmLayer;
       currentBaseLayer.addTo(map);
 
-      // Слой меток
       const markersLayer = L.layerGroup().addTo(map);
       let markersData = [];
-
-      // Режим добавления метки
       let addMarkerMode = false;
       
-      // UI элементы
       const menuToggleBtn = document.getElementById('menuToggleBtn');
       const menuPanel = document.getElementById('menuPanel');
       const addMarkerMenuBtn = document.getElementById('addMarkerMenuBtn');
-      const saveMenuBtn = document.getElementById('saveMenuBtn');
-      const loadMenuBtn = document.getElementById('loadMenuBtn');
-      const fileInput = document.getElementById('fileInput');
+      const geolocationBtn = document.getElementById('geolocationBtn');
+      const panoramaMenuBtn = document.getElementById('panoramaMenuBtn');
+      const saveJsonBtn = document.getElementById('saveJsonBtn');
+      const loadJsonBtn = document.getElementById('loadJsonBtn');
+      const exportKmlBtn = document.getElementById('exportKmlBtn');
+      const importKmlBtn = document.getElementById('importKmlBtn');
+      const jsonFileInput = document.getElementById('jsonFileInput');
+      const kmlFileInput = document.getElementById('kmlFileInput');
       const modeIndicator = document.getElementById('modeIndicator');
-      
-      // Кнопки слоёв
       const layerSchemeBtn = document.getElementById('layerSchemeBtn');
       const layerSatelliteBtn = document.getElementById('layerSatelliteBtn');
       const layerHybridBtn = document.getElementById('layerHybridBtn');
       const layerBtns = [layerSchemeBtn, layerSatelliteBtn, layerHybridBtn];
+      
+      const zoomInBtn = document.getElementById('zoomInBtn');
+      const zoomOutBtn = document.getElementById('zoomOutBtn');
+      
+      const panoramaModal = document.getElementById('panoramaModal');
+      const panoramaFrame = document.getElementById('panoramaFrame');
+      const closePanoramaBtn = document.getElementById('closePanoramaBtn');
 
-      // ---------- Логика меню ----------
+      const searchInput = document.getElementById('searchInput');
+      const searchBtn = document.getElementById('searchBtn');
+      const searchResults = document.getElementById('searchResults');
+      const totalCount = document.getElementById('totalCount');
+
+      zoomInBtn.addEventListener('click', () => map.zoomIn());
+      zoomOutBtn.addEventListener('click', () => map.zoomOut());
+
       menuToggleBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         menuPanel.classList.toggle('visible');
       });
 
-      // Закрытие меню при клике вне его
-      document.addEventListener('click', function(e) {
+      document.addEventListener('click', (e) => {
         if (!menuPanel.contains(e.target) && e.target !== menuToggleBtn) {
           menuPanel.classList.remove('visible');
         }
       });
 
-      // Функция смены активного слоя в UI
-      function setActiveLayerButton(activeBtn) {
+      function updateTotalCount() {
+        totalCount.textContent = markersData.length;
+      }
+
+      function setActiveLayerButton(btn) {
         layerBtns.forEach(b => b.classList.remove('active-layer'));
-        activeBtn.classList.add('active-layer');
+        btn.classList.add('active-layer');
       }
 
-      // Переключение слоёв
-      function switchBaseLayer(newLayer, button) {
-        map.removeLayer(currentBaseLayer);
-        currentBaseLayer = newLayer;
-        currentBaseLayer.addTo(map);
-        setActiveLayerButton(button);
-      }
-
-      layerSchemeBtn.addEventListener('click', () => {
-        switchBaseLayer(osmLayer, layerSchemeBtn);
-      });
-      
-      layerSatelliteBtn.addEventListener('click', () => {
-        switchBaseLayer(satelliteLayer, layerSatelliteBtn);
-      });
-      
-      layerHybridBtn.addEventListener('click', () => {
-        // Гибрид: спутник + подписи
-        map.removeLayer(currentBaseLayer);
-        hybridGroup.addTo(map);
-        currentBaseLayer = hybridGroup;
-        setActiveLayerButton(layerHybridBtn);
-        // Костыль для корректного удаления группы в будущем
-        map._currentHybrid = true;
-      });
-
-      // Переопределяем удаление для гибрида
-      const originalRemoveLayer = map.removeLayer;
-      map.removeLayer = function(layer) {
-        if (layer === hybridGroup) {
-          hybridGroup.removeFrom(map);
+      function switchBaseLayer(newLayer, btn) {
+        if (currentBaseLayer === hybridGroup) {
+          map.removeLayer(hybridGroup);
         } else {
-          originalRemoveLayer.call(map, layer);
+          map.removeLayer(currentBaseLayer);
         }
-      };
+        if (newLayer === hybridGroup) {
+          hybridGroup.addTo(map);
+        } else {
+          newLayer.addTo(map);
+        }
+        currentBaseLayer = newLayer;
+        setActiveLayerButton(btn);
+      }
 
-      // ---------- Режим добавления метки ----------
+      layerSchemeBtn.addEventListener('click', () => switchBaseLayer(osmLayer, layerSchemeBtn));
+      layerSatelliteBtn.addEventListener('click', () => switchBaseLayer(satelliteLayer, layerSatelliteBtn));
+      layerHybridBtn.addEventListener('click', () => switchBaseLayer(hybridGroup, layerHybridBtn));
+
+      panoramaMenuBtn.addEventListener('click', () => {
+        const center = map.getCenter();
+        panoramaFrame.src = `https://www.google.com/maps/embed?pb=!4v1!6m8!1m3!1d0!2d${center.lng.toFixed(6)}!3d${center.lat.toFixed(6)}!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sru!2sru`;
+        panoramaModal.classList.add('active');
+        menuPanel.classList.remove('visible');
+      });
+
+      closePanoramaBtn.addEventListener('click', () => {
+        panoramaModal.classList.remove('active');
+        panoramaFrame.src = '';
+      });
+
+      // Геолокация – обработчик для отдельной кнопки
+      geolocationBtn.addEventListener('click', () => {
+        if (!navigator.geolocation) {
+          alert('Геолокация не поддерживается вашим браузером');
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            const userLatLng = L.latLng(lat, lng);
+            
+            const userMarker = L.marker(userLatLng, {
+              icon: L.divIcon({
+                className: 'custom-marker',
+                html: '<div style="background:#3b82f6; width:20px; height:20px; border-radius:50%; border:3px solid white; box-shadow:0 0 15px #3b82f6;"></div>',
+                iconSize: [20,20],
+                iconAnchor: [10,10]
+              })
+            }).addTo(map).bindPopup('📍 Вы здесь').openPopup();
+            
+            if (markersData.length > 0) {
+              let minDist = Infinity;
+              let closestMarker = null;
+              markersData.forEach(m => {
+                const dist = map.distance(userLatLng, L.latLng(m.lat, m.lng));
+                if (dist < minDist) {
+                  minDist = dist;
+                  closestMarker = m;
+                }
+              });
+              if (closestMarker) {
+                const distKm = (minDist / 1000).toFixed(2);
+                alert(`Ближайший объект: ${closestMarker.name} (${distKm} км)`);
+                const bounds = L.latLngBounds([userLatLng, L.latLng(closestMarker.lat, closestMarker.lng)]);
+                map.fitBounds(bounds, { padding: [50, 50] });
+                markersLayer.eachLayer(layer => {
+                  if (layer._data && layer._data.id === closestMarker.id) {
+                    layer.openPopup();
+                  }
+                });
+              } else {
+                map.setView(userLatLng, 15);
+              }
+            } else {
+              map.setView(userLatLng, 15);
+            }
+            
+            setTimeout(() => map.removeLayer(userMarker), 30000);
+          },
+          (err) => {
+            alert('Ошибка геолокации: ' + err.message);
+          }
+        );
+      });
+
+      function performSearch() {
+        const query = searchInput.value.trim().toLowerCase();
+        searchResults.innerHTML = '';
+        
+        if (!query || markersData.length === 0) {
+          if (markersData.length === 0 && query) {
+            searchResults.innerHTML = '<div style="padding:8px;color:#888;">Ничего не найдено</div>';
+          }
+          return;
+        }
+
+        const filtered = markersData.filter(m => 
+          m.name.toLowerCase().includes(query) || 
+          m.description.toLowerCase().includes(query)
+        );
+
+        if (filtered.length === 0) {
+          searchResults.innerHTML = '<div style="padding:8px;color:#888;">Ничего не найдено</div>';
+          return;
+        }
+
+        filtered.forEach(m => {
+          const div = document.createElement('div');
+          div.className = 'search-result-item';
+          div.innerHTML = `
+            <span>${m.iconEmoji || '🏚️'} ${esc(m.name)}</span>
+            <span class="guard-badge">👮 ${m.guardLevel}/10</span>
+          `;
+          div.addEventListener('click', () => {
+            map.setView([m.lat, m.lng], 16);
+            markersLayer.eachLayer(layer => {
+              if (layer._data && layer._data.id === m.id) {
+                layer.openPopup();
+              }
+            });
+            menuPanel.classList.remove('visible');
+          });
+          searchResults.appendChild(div);
+        });
+      }
+
+      searchBtn.addEventListener('click', performSearch);
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') performSearch();
+      });
+
       function enableAddMarkerMode() {
         addMarkerMode = true;
         addMarkerMenuBtn.classList.add('active-mode');
         modeIndicator.style.display = 'block';
         map.getContainer().style.cursor = 'crosshair';
-        menuPanel.classList.remove('visible'); // закрываем меню для удобства
+        menuPanel.classList.remove('visible');
       }
 
       function disableAddMarkerMode() {
@@ -361,247 +699,318 @@
       }
 
       addMarkerMenuBtn.addEventListener('click', () => {
-        if (addMarkerMode) {
-          disableAddMarkerMode();
-        } else {
-          enableAddMarkerMode();
-        }
+        addMarkerMode ? disableAddMarkerMode() : enableAddMarkerMode();
       });
 
-      // Обработка клика по карте для метки
-      map.on('click', function(e) {
+      map.on('click', (e) => {
         if (!addMarkerMode) return;
         
-        const lat = e.latlng.lat.toFixed(6);
-        const lng = e.latlng.lng.toFixed(6);
-        
-        const name = prompt('🏚️ Название заброшенного объекта:', `Объект №${markersData.length + 1}`);
+        const name = prompt('🏚️ Название объекта:', `Объект №${markersData.length + 1}`);
         if (name === null) return;
         
-        const description = prompt('📝 Описание (состояние, история):', 'Заброшено, требуется исследование');
+        const description = prompt('📝 Описание:', 'Заброшено');
         if (description === null) return;
         
-        // Уровень опасности (тематическая фишка)
-        const danger = prompt('⚠️ Уровень опасности (1-5, где 5 – очень опасно):', '3');
-        const dangerLevel = danger ? parseInt(danger) || 3 : 3;
+        const guard = prompt('👮 Уровень охраны (0-10):', '3');
+        if (guard === null) return;
+        const guardLevel = Math.min(10, Math.max(0, parseInt(guard) || 0));
         
-        addMarkerToMap(e.latlng, name, description, Math.min(5, Math.max(1, dangerLevel)));
+        const statusPrompt = prompt('📌 Статус:\n1 - не проверен\n2 - охраняется\n3 - свободен\n4 - снесён', '1');
+        if (statusPrompt === null) return;
+        const statusMap = { '1': 'unchecked', '2': 'guarded', '3': 'free', '4': 'demolished' };
+        const status = statusMap[statusPrompt] || 'unchecked';
         
-        // Автоматически выключаем режим после добавления? Оставим включенным для массового добавления.
-        // Но можно сделать по желанию. Пока оставим включенным.
+        const size = prompt('📏 Размер метки (20-60 пикселей):', '32');
+        if (size === null) return;
+        const markerSize = Math.min(60, Math.max(20, parseInt(size) || 32));
+        
+        const iconEmoji = prompt('🎨 Иконка (🏚️, 🏭, 🏥, 🏰, ⛪, 🚇 или свой эмодзи):', '🏚️');
+        if (iconEmoji === null) return;
+        
+        addMarker(e.latlng, name, description, guardLevel, status, markerSize, iconEmoji || '🏚️');
       });
 
-      function addMarkerToMap(latlng, name, description, dangerLevel) {
-        const markerId = Date.now() + Math.random().toString(36);
+      function getStatusColor(status) {
+        switch(status) {
+          case 'unchecked': return '#fbbf24';
+          case 'guarded': return '#ef4444';
+          case 'free': return '#22c55e';
+          case 'demolished': return '#6b7280';
+          default: return '#ffffff';
+        }
+      }
+
+      function getStatusText(status) {
+        switch(status) {
+          case 'unchecked': return '❓ Не проверен';
+          case 'guarded': return '🔒 Охраняется';
+          case 'free': return '✅ Свободен';
+          case 'demolished': return '💀 Снесён';
+          default: return status;
+        }
+      }
+
+      function createMarkerIcon(guard, size, status, iconEmoji) {
+        const intensity = guard / 10;
+        const red = Math.round(185 + (220 - 185) * intensity);
+        const green = Math.round(28 + (38 - 28) * (1 - intensity));
+        const blue = Math.round(28 + (38 - 28) * (1 - intensity));
+        const bgColor = `rgb(${red},${green},${blue})`;
+        const borderColor = getStatusColor(status);
+        const halfSize = size / 2;
+        const fontSize = size * 0.5;
         
-        // Иконка в зависимости от опасности
-        const markerColor = dangerLevel >= 4 ? '#b91c1c' : (dangerLevel === 3 ? '#d97706' : '#4d7c0f');
-        const markerIcon = L.divIcon({
-          className: 'custom-marker',
-          html: `<div style="background:${markerColor}; width:24px; height:24px; border-radius:50%; border:2px solid white; box-shadow:0 0 10px rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:14px;">⚠</div>`,
-          iconSize: [24, 24],
-          iconAnchor: [12, 12],
-          popupAnchor: [0, -12]
+        return L.divIcon({
+          className: 'custom-marker marker-animate',
+          html: `<div style="background:${bgColor}; width:${size}px; height:${size}px; border-radius:50%; border:3px solid ${borderColor}; box-shadow:0 0 12px black; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:${fontSize}px; animation: fadeIn 0.4s ease-out;">${iconEmoji}</div>`,
+          iconSize: [size, size],
+          iconAnchor: [halfSize, halfSize],
+          popupAnchor: [0, -halfSize]
         });
+      }
 
-        const marker = L.marker(latlng, {
-          icon: markerIcon,
-          draggable: true,
-          autoPan: true
-        }).addTo(markersLayer);
+      function addMarker(latlng, name, desc, guard, status, size, iconEmoji) {
+        const id = Date.now() + Math.random().toString(36);
+        const icon = createMarkerIcon(guard, size, status, iconEmoji);
 
-        const markerObj = {
-          id: markerId,
-          lat: latlng.lat,
-          lng: latlng.lng,
-          name: name,
-          description: description,
-          dangerLevel: dangerLevel,
-          type: 'abandoned'
+        const marker = L.marker(latlng, { icon, draggable: true, autoPan: true }).addTo(markersLayer);
+        const data = { 
+          id, lat: latlng.lat, lng: latlng.lng, 
+          name, description: desc, guardLevel: guard, 
+          status, markerSize: size, iconEmoji 
         };
-        markersData.push(markerObj);
-        marker._markerData = markerObj;
-
-        updateMarkerPopup(marker);
+        markersData.push(data);
+        marker._data = data;
+        updatePopup(marker);
+        updateTotalCount();
         
-        marker.on('dragend', function() {
-          const newPos = marker.getLatLng();
-          marker._markerData.lat = newPos.lat;
-          marker._markerData.lng = newPos.lng;
-          updateMarkerPopup(marker);
+        marker.on('dragend', () => {
+          const pos = marker.getLatLng();
+          marker._data.lat = pos.lat;
+          marker._data.lng = pos.lng;
+          updatePopup(marker);
         });
-
+        
         marker.openPopup();
       }
 
-      function updateMarkerPopup(marker) {
-        const data = marker._markerData;
-        if (!data) return;
-        
-        const dangerEmoji = ['', '🟢', '🟡', '🟠', '🔴', '⛔'][data.dangerLevel] || '🟠';
-        
-        const popupContent = `
-          <div class="abandoned-popup">
-            <h3>🏚️ ${escapeHtml(data.name)}</h3>
-            <div class="coords">
-              📍 ${data.lat.toFixed(6)}, ${data.lng.toFixed(6)}
-            </div>
-            <div class="desc">📋 ${escapeHtml(data.description) || 'Нет описания'}</div>
-            <div class="danger-level">${dangerEmoji} Опасность: ${data.dangerLevel}/5</div>
-            <button class="delete-marker-btn" data-id="${data.id}">🗑️ Удалить объект</button>
-          </div>
-        `;
-        
-        marker.unbindPopup();
-        marker.bindPopup(popupContent, {
-          maxWidth: 280,
-          className: 'abandoned-popup-container'
+      function findMarkerById(id) {
+        let found = null;
+        markersLayer.eachLayer(layer => {
+          if (layer._data && layer._data.id === id) {
+            found = layer;
+          }
         });
+        return found;
+      }
+
+      function editMarker(id) {
+        const marker = findMarkerById(id);
+        if (!marker) return;
+        const data = marker._data;
         
-        marker.on('popupopen', function() {
+        const newName = prompt('🏚️ Название объекта:', data.name);
+        if (newName === null) return;
+        
+        const newDesc = prompt('📝 Описание:', data.description);
+        if (newDesc === null) return;
+        
+        const newGuard = prompt('👮 Уровень охраны (0-10):', data.guardLevel);
+        if (newGuard === null) return;
+        const guardLevel = Math.min(10, Math.max(0, parseInt(newGuard) || 0));
+        
+        const statusMap = { '1': 'unchecked', '2': 'guarded', '3': 'free', '4': 'demolished' };
+        const currentStatusKey = Object.keys(statusMap).find(k => statusMap[k] === data.status) || '1';
+        const newStatusPrompt = prompt('📌 Статус:\n1 - не проверен\n2 - охраняется\n3 - свободен\n4 - снесён', currentStatusKey);
+        if (newStatusPrompt === null) return;
+        const newStatus = statusMap[newStatusPrompt] || data.status;
+        
+        const newSize = prompt('📏 Размер метки (20-60 пикселей):', data.markerSize);
+        if (newSize === null) return;
+        const markerSize = Math.min(60, Math.max(20, parseInt(newSize) || 32));
+        
+        const newIconEmoji = prompt('🎨 Иконка (эмодзи):', data.iconEmoji);
+        if (newIconEmoji === null) return;
+        
+        data.name = newName;
+        data.description = newDesc;
+        data.guardLevel = guardLevel;
+        data.status = newStatus;
+        data.markerSize = markerSize;
+        data.iconEmoji = newIconEmoji || '🏚️';
+        
+        const newIcon = createMarkerIcon(guardLevel, markerSize, newStatus, data.iconEmoji);
+        marker.setIcon(newIcon);
+        
+        updatePopup(marker);
+        marker.openPopup();
+      }
+
+      function updatePopup(marker) {
+        const d = marker._data;
+        const guardEmoji = d.guardLevel <= 2 ? '🟢' : (d.guardLevel <= 5 ? '🟡' : (d.guardLevel <= 7 ? '🟠' : '🔴'));
+        const statusText = getStatusText(d.status);
+        const html = `
+          <div class="abandoned-popup">
+            <h3>${d.iconEmoji || '🏚️'} ${esc(d.name)}</h3>
+            <div class="coords">📍 ${d.lat.toFixed(6)}, ${d.lng.toFixed(6)}</div>
+            <div class="desc">📋 ${esc(d.description)}</div>
+            <div class="guard-level">${guardEmoji} Охрана: ${d.guardLevel}/10</div>
+            <div class="status-line">📌 Статус: ${statusText}</div>
+            <div class="action-buttons">
+              <button class="edit-btn" data-id="${d.id}">✏️ Изменить</button>
+              <button class="delete-btn" data-id="${d.id}">🗑️ Удалить</button>
+            </div>
+          </div>`;
+        marker.unbindPopup();
+        marker.bindPopup(html, { maxWidth: 280 });
+        marker.on('popupopen', () => {
           setTimeout(() => {
-            const delBtn = document.querySelector(`.delete-marker-btn[data-id="${data.id}"]`);
-            if (delBtn) {
-              delBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                deleteMarkerById(data.id);
-              });
-            }
+            const editBtn = document.querySelector(`.edit-btn[data-id="${d.id}"]`);
+            const deleteBtn = document.querySelector(`.delete-btn[data-id="${d.id}"]`);
+            if (editBtn) editBtn.onclick = (e) => { e.stopPropagation(); editMarker(d.id); };
+            if (deleteBtn) deleteBtn.onclick = (e) => { e.stopPropagation(); deleteMarker(d.id); };
           }, 50);
         });
       }
 
-      function deleteMarkerById(id) {
+      function deleteMarker(id) {
         markersData = markersData.filter(m => m.id !== id);
-        markersLayer.eachLayer(layer => {
-          if (layer._markerData && layer._markerData.id === id) {
-            markersLayer.removeLayer(layer);
-          }
-        });
+        markersLayer.eachLayer(l => { if (l._data?.id === id) markersLayer.removeLayer(l); });
+        updateTotalCount();
+        performSearch();
       }
 
-      function escapeHtml(text) {
-        return String(text)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;');
-      }
+      function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-      // ---------- Сохранение / Загрузка ----------
-      function saveToFile() {
-        const data = {
-          version: '2.0',
-          theme: 'abandoned',
-          markers: markersData,
-          mapView: {
-            center: map.getCenter(),
-            zoom: map.getZoom()
-          }
-        };
-        const jsonStr = JSON.stringify(data, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
+      saveJsonBtn.addEventListener('click', () => {
+        const data = { markers: markersData, view: { center: map.getCenter(), zoom: map.getZoom() } };
+        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `abandoned_russia_${new Date().toISOString().slice(0,10)}.json`;
-        document.body.appendChild(a);
+        a.href = URL.createObjectURL(blob);
+        a.download = `map_${new Date().toISOString().slice(0,10)}.json`;
         a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
+        menuPanel.classList.remove('visible');
+      });
 
-      function loadFromFile(file) {
+      loadJsonBtn.addEventListener('click', () => { jsonFileInput.click(); menuPanel.classList.remove('visible'); });
+      
+      jsonFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = (ev) => {
           try {
-            const data = JSON.parse(e.target.result);
-            if (!data.markers) {
-              alert('Файл не содержит меток!');
-              return;
-            }
+            const data = JSON.parse(ev.target.result);
             markersLayer.clearLayers();
             markersData = [];
-            
-            data.markers.forEach(m => {
-              const latlng = L.latLng(m.lat, m.lng);
-              const danger = m.dangerLevel || 3;
-              const markerColor = danger >= 4 ? '#b91c1c' : (danger === 3 ? '#d97706' : '#4d7c0f');
-              const markerIcon = L.divIcon({
-                className: 'custom-marker',
-                html: `<div style="background:${markerColor}; width:24px; height:24px; border-radius:50%; border:2px solid white; box-shadow:0 0 10px rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; color:white; font-weight:bold;">⚠</div>`,
-                iconSize: [24,24],
-                iconAnchor: [12,12],
-                popupAnchor: [0,-12]
+            if (data.markers) {
+              data.markers.forEach(m => {
+                addMarker(
+                  L.latLng(m.lat, m.lng), 
+                  m.name, m.description, 
+                  m.guardLevel || 0, 
+                  m.status || 'unchecked', 
+                  m.markerSize || 32, 
+                  m.iconEmoji || '🏚️'
+                );
               });
-              
-              const marker = L.marker(latlng, { icon: markerIcon, draggable: true }).addTo(markersLayer);
-              const markerObj = {
-                id: m.id || Date.now() + Math.random(),
-                lat: m.lat,
-                lng: m.lng,
-                name: m.name,
-                description: m.description,
-                dangerLevel: danger,
-                type: 'abandoned'
-              };
-              marker._markerData = markerObj;
-              markersData.push(markerObj);
-              updateMarkerPopup(marker);
-              marker.on('dragend', function() {
-                const newPos = marker.getLatLng();
-                marker._markerData.lat = newPos.lat;
-                marker._markerData.lng = newPos.lng;
-                updateMarkerPopup(marker);
-              });
-            });
-            
-            if (data.mapView) {
-              map.setView(data.mapView.center, data.mapView.zoom);
             }
-            alert('✅ Карта заброшенных объектов загружена!');
-          } catch (err) {
-            alert('Ошибка загрузки: ' + err.message);
+            updateTotalCount();
+            if (data.view) map.setView(data.view.center, data.view.zoom);
+          } catch(err) { alert('Ошибка файла JSON'); }
+        };
+        reader.readAsText(file);
+        jsonFileInput.value = '';
+      });
+
+      function generateKml() {
+        let kml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Заброшенные объекты</name>`;
+        markersData.forEach(m => {
+          kml += `
+    <Placemark>
+      <name>${escXml(m.name)}</name>
+      <description>${escXml(m.description)} Охрана: ${m.guardLevel}/10 Статус: ${getStatusText(m.status)}</description>
+      <Point>
+        <coordinates>${m.lng},${m.lat},0</coordinates>
+      </Point>
+    </Placemark>`;
+        });
+        kml += `
+  </Document>
+</kml>`;
+        return kml;
+      }
+
+      function escXml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+
+      exportKmlBtn.addEventListener('click', () => {
+        const kml = generateKml();
+        const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `objects_${new Date().toISOString().slice(0,10)}.kml`;
+        a.click();
+        menuPanel.classList.remove('visible');
+      });
+
+      importKmlBtn.addEventListener('click', () => { kmlFileInput.click(); menuPanel.classList.remove('visible'); });
+
+      kmlFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          try {
+            const text = ev.target.result;
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(text, 'text/xml');
+            const placemarks = xml.querySelectorAll('Placemark');
+            if (placemarks.length === 0) {
+              alert('KML не содержит меток');
+              return;
+            }
+            let added = 0;
+            placemarks.forEach(pm => {
+              const name = pm.querySelector('name')?.textContent || 'Импорт KML';
+              const desc = pm.querySelector('description')?.textContent || '';
+              const coords = pm.querySelector('coordinates')?.textContent?.trim();
+              if (coords) {
+                const parts = coords.split(',');
+                const lng = parseFloat(parts[0]);
+                const lat = parseFloat(parts[1]);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                  addMarker(L.latLng(lat, lng), name, desc, 0, 'unchecked', 32, '🏚️');
+                  added++;
+                }
+              }
+            });
+            updateTotalCount();
+            alert(`Импортировано объектов: ${added}`);
+          } catch(err) {
+            alert('Ошибка обработки KML: ' + err.message);
           }
         };
         reader.readAsText(file);
-      }
-
-      saveMenuBtn.addEventListener('click', () => {
-        saveToFile();
-        menuPanel.classList.remove('visible');
-      });
-      
-      loadMenuBtn.addEventListener('click', () => {
-        fileInput.click();
-        menuPanel.classList.remove('visible');
-      });
-      
-      fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) loadFromFile(file);
-        fileInput.value = '';
+        kmlFileInput.value = '';
       });
 
-      // Закрытие режима по Escape
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
           if (addMarkerMode) disableAddMarkerMode();
           menuPanel.classList.remove('visible');
+          panoramaModal.classList.remove('active');
+          panoramaFrame.src = '';
         }
       });
 
-      // Предустановка пары примеров для атмосферы (можно удалить, но оставим)
-      setTimeout(() => {
-        if (markersData.length === 0) {
-          // Добавим пару известных заброшенных объектов для примера
-          addMarkerToMap(L.latLng(55.7512, 37.6184), 'Бункер Сталина', 'Заброшенный бункер в центре Москвы', 4);
-          addMarkerToMap(L.latLng(59.9343, 30.3351), 'Заброшенная усадьба', 'Старая усадьба в Ленобласти', 2);
-        }
-      }, 800);
-
-      // Инициализация активной кнопки слоя
       setActiveLayerButton(layerSchemeBtn);
+      updateTotalCount();
     })();
   </script>
 </body>
