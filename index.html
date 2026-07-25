@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=1.5">
+  <title>🗺️ Заброшенные объекты России</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+    body, html {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: #1e1e1e;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+      background: #2d2d2d;
+    }
+
+    /* Основная кнопка-меню (бургер) слева сверху */
+    .main-menu-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      z-index: 1100;
+      width: 50px;
+      height: 50px;
+      background: rgba(20, 20, 20, 0.9);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+      transition: all 0.25s;
+      color: #ddd;
+      font-size: 24px;
+    }
+    .main-menu-btn:hover {
+      background: #2a2a2a;
+      border-color: rgba(255,255,255,0.4);
+    }
+
+    /* Выпадающая панель меню */
+    .menu-panel {
+      position: absolute;
+      top: 75px;
+      left: 15px;
+      z-index: 1090;
+      background: rgba(20, 20, 20, 0.95);
+      backdrop-filter: blur(16px);
+      border-radius: 20px;
+      padding: 15px;
+      box-shadow: 0 12px 35px rgba(0,0,0,0.8);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 230px;
+      color: #e0e0e0;
+    }
+    .menu-panel.visible {
+      display: flex;
+    }
+
+    .menu-btn {
+      background: rgba(50, 50, 50, 0.8);
+      border: 1px solid rgba(255,255,255,0.15);
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: 0.2s;
+      color: #f0f0f0;
+      width: 100%;
+      text-align: left;
+    }
+    .menu-btn:hover {
+      background: #3d3d3d;
+      border-color: #5a5a5a;
+    }
+    .menu-btn.active-mode {
+      background: #b45309;
+      border-color: #d97706;
+      color: white;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
+    }
+
+    .separator {
+      height: 1px;
+      background: rgba(255,255,255,0.2);
+      margin: 5px 0;
+    }
+
+    .section-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #a0a0a0;
+      margin: 4px 0;
+    }
+
+    /* Стили для попапов (заброшенная тематика) */
+    .abandoned-popup {
+      background: #1f1f1f;
+      color: #e5e5e5;
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+      border-left: 5px solid #d97706;
+      min-width: 220px;
+    }
+    .abandoned-popup h3 {
+      margin: 0 0 8px;
+      font-size: 17px;
+      color: #fbbf24;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .abandoned-popup .coords {
+      font-family: 'Fira Code', monospace;
+      background: #2d2d2d;
+      padding: 6px 10px;
+      border-radius: 10px;
+      margin: 8px 0;
+      font-size: 13px;
+      color: #b0b0b0;
+    }
+    .abandoned-popup .desc {
+      color: #cbd5e1;
+      margin: 8px 0;
+      font-style: italic;
+      background: #262626;
+      padding: 8px;
+      border-radius: 8px;
+    }
+    .abandoned-popup .danger-level {
+      font-size: 13px;
+      margin: 5px 0;
+    }
+    .abandoned-popup button {
+      background: #b91c1c;
+      border: none;
+      color: white;
+      padding: 7px 16px;
+      border-radius: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 8px;
+      width: 100%;
+      transition: 0.2s;
+    }
+    .abandoned-popup button:hover {
+      background: #dc2626;
+    }
+
+    .leaflet-popup-content-wrapper {
+      background: transparent;
+      box-shadow: none;
+      border-radius: 0;
+    }
+    .leaflet-popup-tip {
+      background: #1f1f1f;
+    }
+
+    /* Индикатор режима на карте */
+    .mode-indicator {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: #fbbf24;
+      padding: 6px 18px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 14px;
+      z-index: 1000;
+      display: none;
+      border: 1px solid #d97706;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- Кнопка открытия меню -->
+  <div class="main-menu-btn" id="menuToggleBtn" title="Меню инструментов">☰</div>
+
+  <!-- Выпадающее меню -->
+  <div class="menu-panel" id="menuPanel">
+    <div class="section-title">🔍 Действия</div>
+    <button id="addMarkerMenuBtn" class="menu-btn">📍 Добавить объект</button>
+    
+    <div class="separator"></div>
+    <div class="section-title">🗺️ Слои карты</div>
+    <button id="layerSchemeBtn" class="menu-btn layer-btn active-layer">🗺️ Схема</button>
+    <button id="layerSatelliteBtn" class="menu-btn layer-btn">🛰️ Спутник</button>
+    <button id="layerHybridBtn" class="menu-btn layer-btn">🌐 Гибрид</button>
+
+    <div class="separator"></div>
+    <button id="saveMenuBtn" class="menu-btn">💾 Сохранить карту</button>
+    <button id="loadMenuBtn" class="menu-btn">📂 Загрузить карту</button>
+    <input type="file" id="fileInput" accept=".json" style="display: none;">
+    <div style="font-size:12px; color:#888; margin-top:4px;">Тема: заброшенные объекты</div>
+  </div>
+
+  <div class="mode-indicator" id="modeIndicator">📍 Режим: добавление метки (кликните по карте)</div>
+
+  <script>
+    (function() {
+      // ---------- Карта с ограничением по России ----------
+      const map = L.map('map', {
+        center: [62.0, 94.0],
+        zoom: 3,
+        minZoom: 3,
+        maxZoom: 16,
+        zoomControl: true,
+        maxBounds: L.latLngBounds(
+          L.latLng(41.0, 19.0),   // юго-запад
+          L.latLng(82.0, -169.0)  // северо-восток (с учетом Чукотки)
+        ),
+        maxBoundsViscosity: 1.0
+      });
+
+      // Базовые слои
+      const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OSM',
+        maxZoom: 19
+      });
+      
+      const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '© Esri',
+        maxZoom: 18
+      });
+      
+      const hybridLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '© Esri',
+        maxZoom: 18
+      });
+      // Для гибрида добавим подписи поверх спутника
+      const labelsLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+        attribution: '© OSM contributors',
+        maxZoom: 18,
+        opacity: 0.7
+      });
+
+      // Группа для гибрида
+      const hybridGroup = L.layerGroup([satelliteLayer, labelsLayer]);
+      
+      // Устанавливаем слой по умолчанию (схема)
+      let currentBaseLayer = osmLayer;
+      currentBaseLayer.addTo(map);
+
+      // Слой меток
+      const markersLayer = L.layerGroup().addTo(map);
+      let markersData = [];
+
+      // Режим добавления метки
+      let addMarkerMode = false;
+      
+      // UI элементы
+      const menuToggleBtn = document.getElementById('menuToggleBtn');
+      const menuPanel = document.getElementById('menuPanel');
+      const addMarkerMenuBtn = document.getElementById('addMarkerMenuBtn');
+      const saveMenuBtn = document.getElementById('saveMenuBtn');
+      const loadMenuBtn = document.getElementById('loadMenuBtn');
+      const fileInput = document.getElementById('fileInput');
+      const modeIndicator = document.getElementById('modeIndicator');
+      
+      // Кнопки слоёв
+      const layerSchemeBtn = document.getElementById('layerSchemeBtn');
+      const layerSatelliteBtn = document.getElementById('layerSatelliteBtn');
+      const layerHybridBtn = document.getElementById('layerHybridBtn');
+      const layerBtns = [layerSchemeBtn, layerSatelliteBtn, layerHybridBtn];
+
+      // ---------- Логика меню ----------
+      menuToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menuPanel.classList.toggle('visible');
+      });
+
+      // Закрытие меню при клике вне его
+      document.addEventListener('click', function(e) {
+        if (!menuPanel.contains(e.target) && e.target !== menuToggleBtn) {
+          menuPanel.classList.remove('visible');
+        }
+      });
+
+      // Функция смены активного слоя в UI
+      function setActiveLayerButton(activeBtn) {
+        layerBtns.forEach(b => b.classList.remove('active-layer'));
+        activeBtn.classList.add('active-layer');
+      }
+
+      // Переключение слоёв
+      function switchBaseLayer(newLayer, button) {
+        map.removeLayer(currentBaseLayer);
+        currentBaseLayer = newLayer;
+        currentBaseLayer.addTo(map);
+        setActiveLayerButton(button);
+      }
+
+      layerSchemeBtn.addEventListener('click', () => {
+        switchBaseLayer(osmLayer, layerSchemeBtn);
+      });
+      
+      layerSatelliteBtn.addEventListener('click', () => {
+        switchBaseLayer(satelliteLayer, layerSatelliteBtn);
+      });
+      
+      layerHybridBtn.addEventListener('click', () => {
+        // Гибрид: спутник + подписи
+        map.removeLayer(currentBaseLayer);
+        hybridGroup.addTo(map);
+        currentBaseLayer = hybridGroup;
+        setActiveLayerButton(layerHybridBtn);
+        // Костыль для корректного удаления группы в будущем
+        map._currentHybrid = true;
+      });
+
+      // Переопределяем удаление для гибрида
+      const originalRemoveLayer = map.removeLayer;
+      map.removeLayer = function(layer) {
+        if (layer === hybridGroup) {
+          hybridGroup.removeFrom(map);
+        } else {
+          originalRemoveLayer.call(map, layer);
+        }
+      };
+
+      // ---------- Режим добавления метки ----------
+      function enableAddMarkerMode() {
+        addMarkerMode = true;
+        addMarkerMenuBtn.classList.add('active-mode');
+        modeIndicator.style.display = 'block';
+        map.getContainer().style.cursor = 'crosshair';
+        menuPanel.classList.remove('visible'); // закрываем меню для удобства
+      }
+
+      function disableAddMarkerMode() {
+        addMarkerMode = false;
+        addMarkerMenuBtn.classList.remove('active-mode');
+        modeIndicator.style.display = 'none';
+        map.getContainer().style.cursor = '';
+      }
+
+      addMarkerMenuBtn.addEventListener('click', () => {
+        if (addMarkerMode) {
+          disableAddMarkerMode();
+        } else {
+          enableAddMarkerMode();
+        }
+      });
+
+      // Обработка клика по карте для метки
+      map.on('click', function(e) {
+        if (!addMarkerMode) return;
+        
+        const lat = e.latlng.lat.toFixed(6);
+        const lng = e.latlng.lng.toFixed(6);
+        
+        const name = prompt('🏚️ Название заброшенного объекта:', `Объект №${markersData.length + 1}`);
+        if (name === null) return;
+        
+        const description = prompt('📝 Описание (состояние, история):', 'Заброшено, требуется исследование');
+        if (description === null) return;
+        
+        // Уровень опасности (тематическая фишка)
+        const danger = prompt('⚠️ Уровень опасности (1-5, где 5 – очень опасно):', '3');
+        const dangerLevel = danger ? parseInt(danger) || 3 : 3;
+        
+        addMarkerToMap(e.latlng, name, description, Math.min(5, Math.max(1, dangerLevel)));
+        
+        // Автоматически выключаем режим после добавления? Оставим включенным для массового добавления.
+        // Но можно сделать по желанию. Пока оставим включенным.
+      });
+
+      function addMarkerToMap(latlng, name, description, dangerLevel) {
+        const markerId = Date.now() + Math.random().toString(36);
+        
+        // Иконка в зависимости от опасности
+        const markerColor = dangerLevel >= 4 ? '#b91c1c' : (dangerLevel === 3 ? '#d97706' : '#4d7c0f');
+        const markerIcon = L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="background:${markerColor}; width:24px; height:24px; border-radius:50%; border:2px solid white; box-shadow:0 0 10px rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:14px;">⚠</div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12],
+          popupAnchor: [0, -12]
+        });
+
+        const marker = L.marker(latlng, {
+          icon: markerIcon,
+          draggable: true,
+          autoPan: true
+        }).addTo(markersLayer);
+
+        const markerObj = {
+          id: markerId,
+          lat: latlng.lat,
+          lng: latlng.lng,
+          name: name,
+          description: description,
+          dangerLevel: dangerLevel,
+          type: 'abandoned'
+        };
+        markersData.push(markerObj);
+        marker._markerData = markerObj;
+
+        updateMarkerPopup(marker);
+        
+        marker.on('dragend', function() {
+          const newPos = marker.getLatLng();
+          marker._markerData.lat = newPos.lat;
+          marker._markerData.lng = newPos.lng;
+          updateMarkerPopup(marker);
+        });
+
+        marker.openPopup();
+      }
+
+      function updateMarkerPopup(marker) {
+        const data = marker._markerData;
+        if (!data) return;
+        
+        const dangerEmoji = ['', '🟢', '🟡', '🟠', '🔴', '⛔'][data.dangerLevel] || '🟠';
+        
+        const popupContent = `
+          <div class="abandoned-popup">
+            <h3>🏚️ ${escapeHtml(data.name)}</h3>
+            <div class="coords">
+              📍 ${data.lat.toFixed(6)}, ${data.lng.toFixed(6)}
+            </div>
+            <div class="desc">📋 ${escapeHtml(data.description) || 'Нет описания'}</div>
+            <div class="danger-level">${dangerEmoji} Опасность: ${data.dangerLevel}/5</div>
+            <button class="delete-marker-btn" data-id="${data.id}">🗑️ Удалить объект</button>
+          </div>
+        `;
+        
+        marker.unbindPopup();
+        marker.bindPopup(popupContent, {
+          maxWidth: 280,
+          className: 'abandoned-popup-container'
+        });
+        
+        marker.on('popupopen', function() {
+          setTimeout(() => {
+            const delBtn = document.querySelector(`.delete-marker-btn[data-id="${data.id}"]`);
+            if (delBtn) {
+              delBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteMarkerById(data.id);
+              });
+            }
+          }, 50);
+        });
+      }
+
+      function deleteMarkerById(id) {
+        markersData = markersData.filter(m => m.id !== id);
+        markersLayer.eachLayer(layer => {
+          if (layer._markerData && layer._markerData.id === id) {
+            markersLayer.removeLayer(layer);
+          }
+        });
+      }
+
+      function escapeHtml(text) {
+        return String(text)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      // ---------- Сохранение / Загрузка ----------
+      function saveToFile() {
+        const data = {
+          version: '2.0',
+          theme: 'abandoned',
+          markers: markersData,
+          mapView: {
+            center: map.getCenter(),
+            zoom: map.getZoom()
+          }
+        };
+        const jsonStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `abandoned_russia_${new Date().toISOString().slice(0,10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      function loadFromFile(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const data = JSON.parse(e.target.result);
+            if (!data.markers) {
+              alert('Файл не содержит меток!');
+              return;
+            }
+            markersLayer.clearLayers();
+            markersData = [];
+            
+            data.markers.forEach(m => {
+              const latlng = L.latLng(m.lat, m.lng);
+              const danger = m.dangerLevel || 3;
+              const markerColor = danger >= 4 ? '#b91c1c' : (danger === 3 ? '#d97706' : '#4d7c0f');
+              const markerIcon = L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="background:${markerColor}; width:24px; height:24px; border-radius:50%; border:2px solid white; box-shadow:0 0 10px rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; color:white; font-weight:bold;">⚠</div>`,
+                iconSize: [24,24],
+                iconAnchor: [12,12],
+                popupAnchor: [0,-12]
+              });
+              
+              const marker = L.marker(latlng, { icon: markerIcon, draggable: true }).addTo(markersLayer);
+              const markerObj = {
+                id: m.id || Date.now() + Math.random(),
+                lat: m.lat,
+                lng: m.lng,
+                name: m.name,
+                description: m.description,
+                dangerLevel: danger,
+                type: 'abandoned'
+              };
+              marker._markerData = markerObj;
+              markersData.push(markerObj);
+              updateMarkerPopup(marker);
+              marker.on('dragend', function() {
+                const newPos = marker.getLatLng();
+                marker._markerData.lat = newPos.lat;
+                marker._markerData.lng = newPos.lng;
+                updateMarkerPopup(marker);
+              });
+            });
+            
+            if (data.mapView) {
+              map.setView(data.mapView.center, data.mapView.zoom);
+            }
+            alert('✅ Карта заброшенных объектов загружена!');
+          } catch (err) {
+            alert('Ошибка загрузки: ' + err.message);
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      saveMenuBtn.addEventListener('click', () => {
+        saveToFile();
+        menuPanel.classList.remove('visible');
+      });
+      
+      loadMenuBtn.addEventListener('click', () => {
+        fileInput.click();
+        menuPanel.classList.remove('visible');
+      });
+      
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) loadFromFile(file);
+        fileInput.value = '';
+      });
+
+      // Закрытие режима по Escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          if (addMarkerMode) disableAddMarkerMode();
+          menuPanel.classList.remove('visible');
+        }
+      });
+
+      // Предустановка пары примеров для атмосферы (можно удалить, но оставим)
+      setTimeout(() => {
+        if (markersData.length === 0) {
+          // Добавим пару известных заброшенных объектов для примера
+          addMarkerToMap(L.latLng(55.7512, 37.6184), 'Бункер Сталина', 'Заброшенный бункер в центре Москвы', 4);
+          addMarkerToMap(L.latLng(59.9343, 30.3351), 'Заброшенная усадьба', 'Старая усадьба в Ленобласти', 2);
+        }
+      }, 800);
+
+      // Инициализация активной кнопки слоя
+      setActiveLayerButton(layerSchemeBtn);
+    })();
+  </script>
+</body>
+</html>
