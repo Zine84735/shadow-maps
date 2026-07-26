@@ -2,8 +2,15 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=1.5">
-  <title>🗺️ Заброшенные объекты – Карта</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=1.5, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1e1e1e">
+  <title>Заброшенные объекты</title>
+
+  <!-- Встроенный манифест для PWA -->
+  <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogItCb0LDQsdGA0L7RiNC10L3QvdGL0LUg0L7QsdGK0LXQutGC0YsiLAogICJzaG9ydF9uYW1lIjogItCb0LDQsdGA0L7RiNC10L3QutC4IiwKICAic3RhcnRfdXJsIjogIi4vaW5kZXguaHRtbCIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzFlMWUxZSIsCiAgInRoZW1lX2NvbG9yIjogIiMxZTFlMWUiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUIyWlhKemFXOXVJREV3TUNCd2NtOTJhV1FnTVRBd0lISmxjM04wYjNJZ01UQXdJSE4wZVcxaFoyVWdTVzVuYzJVZ2MzUnlaV1FnYVc1bWN5QmhjM04wYVdOaGRDQWdNakF3TURFZ1BpQThMM04yWno9IiwKICAgICAgInNpemVzIjogIjE5MngxOTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9zdmcreG1sIgogICAgfQogIF0KfQ==">
+  
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
@@ -29,7 +36,6 @@
       display: none !important;
     }
 
-    /* Кнопки зума справа внизу */
     .custom-zoom {
       position: absolute;
       bottom: 30px;
@@ -68,12 +74,17 @@
       background: #3a3a3a;
     }
 
-    /* Кнопка геолокации слева внизу */
-    .geolocation-btn {
+    /* Кнопки слева внизу */
+    .left-bottom-buttons {
       position: absolute;
       bottom: 30px;
       left: 20px;
       z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .left-bottom-buttons button {
       width: 48px;
       height: 48px;
       background: rgba(20, 20, 20, 0.9);
@@ -92,12 +103,12 @@
       line-height: 1;
       user-select: none;
     }
-    .geolocation-btn:hover {
+    .left-bottom-buttons button:hover {
       background: #2a2a2a;
       border-color: rgba(255,255,255,0.4);
       transform: scale(1.05);
     }
-    .geolocation-btn:active {
+    .left-bottom-buttons button:active {
       transform: scale(0.95);
       background: #3a3a3a;
     }
@@ -299,9 +310,14 @@
       border-radius: 8px;
     }
     .abandoned-popup .guard-level,
-    .abandoned-popup .status-line {
+    .abandoned-popup .status-line,
+    .abandoned-popup .visit-date {
       font-size: 13px;
       margin: 5px 0;
+    }
+    .abandoned-popup .old-warning {
+      color: #f87171;
+      font-weight: bold;
     }
     .abandoned-popup .action-buttons {
       display: flex;
@@ -414,8 +430,11 @@
 <body>
   <div id="map"></div>
 
-  <!-- Кнопка геолокации слева внизу (отдельно от меню) -->
-  <button class="geolocation-btn" id="geolocationBtn" title="Моё местоположение">📍</button>
+  <!-- Кнопки слева внизу: геолокация и север -->
+  <div class="left-bottom-buttons">
+    <button id="geolocationBtn" title="Моё местоположение">📍</button>
+    <button id="northBtn" title="Повернуть карту на север">🧭</button>
+  </div>
 
   <div class="custom-zoom">
     <button id="zoomInBtn" title="Приблизить">+</button>
@@ -466,6 +485,30 @@
   <div class="mode-indicator" id="modeIndicator">📍 Кликните по карте для добавления объекта</div>
 
   <script>
+    // Регистрация Service Worker для кеширования
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        const CACHE_NAME = 'abandoned-map-v1';
+        const urlsToCache = [
+          'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+          'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+        ];
+        self.addEventListener('install', event => {
+          event.waitUntil(
+            caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+          );
+        });
+        self.addEventListener('fetch', event => {
+          event.respondWith(
+            caches.match(event.request).then(response => response || fetch(event.request))
+          );
+        });
+      `;
+      const blob = new Blob([swCode], { type: 'application/javascript' });
+      const swUrl = URL.createObjectURL(blob);
+      navigator.serviceWorker.register(swUrl);
+    }
+
     (function() {
       const map = L.map('map', {
         center: [55.7558, 37.6173],
@@ -502,6 +545,7 @@
       const menuPanel = document.getElementById('menuPanel');
       const addMarkerMenuBtn = document.getElementById('addMarkerMenuBtn');
       const geolocationBtn = document.getElementById('geolocationBtn');
+      const northBtn = document.getElementById('northBtn');
       const panoramaMenuBtn = document.getElementById('panoramaMenuBtn');
       const saveJsonBtn = document.getElementById('saveJsonBtn');
       const loadJsonBtn = document.getElementById('loadJsonBtn');
@@ -529,6 +573,13 @@
 
       zoomInBtn.addEventListener('click', () => map.zoomIn());
       zoomOutBtn.addEventListener('click', () => map.zoomOut());
+
+      // Кнопка "Север"
+      northBtn.addEventListener('click', () => {
+        map.getContainer().style.transform = '';
+        // сбросим также возможный поворот через внутренний обработчик
+        if (map._rotate) map._rotate = 0;
+      });
 
       menuToggleBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -581,7 +632,6 @@
         panoramaFrame.src = '';
       });
 
-      // Геолокация – обработчик для отдельной кнопки
       geolocationBtn.addEventListener('click', () => {
         if (!navigator.geolocation) {
           alert('Геолокация не поддерживается вашим браузером');
@@ -726,8 +776,12 @@
         
         const iconEmoji = prompt('🎨 Иконка (🏚️, 🏭, 🏥, 🏰, ⛪, 🚇 или свой эмодзи):', '🏚️');
         if (iconEmoji === null) return;
+
+        // Дата последнего посещения
+        const visitDate = prompt('📅 Дата последнего посещения (ГГГГ-ММ-ДД, можно пусто):', '');
+        const lastVisitDate = visitDate ? visitDate.trim() : null;
         
-        addMarker(e.latlng, name, description, guardLevel, status, markerSize, iconEmoji || '🏚️');
+        addMarker(e.latlng, name, description, guardLevel, status, markerSize, iconEmoji || '🏚️', lastVisitDate);
       });
 
       function getStatusColor(status) {
@@ -769,7 +823,7 @@
         });
       }
 
-      function addMarker(latlng, name, desc, guard, status, size, iconEmoji) {
+      function addMarker(latlng, name, desc, guard, status, size, iconEmoji, lastVisitDate = null) {
         const id = Date.now() + Math.random().toString(36);
         const icon = createMarkerIcon(guard, size, status, iconEmoji);
 
@@ -777,7 +831,7 @@
         const data = { 
           id, lat: latlng.lat, lng: latlng.lng, 
           name, description: desc, guardLevel: guard, 
-          status, markerSize: size, iconEmoji 
+          status, markerSize: size, iconEmoji, lastVisitDate 
         };
         markersData.push(data);
         marker._data = data;
@@ -792,6 +846,7 @@
         });
         
         marker.openPopup();
+        return marker;
       }
 
       function findMarkerById(id) {
@@ -831,6 +886,9 @@
         
         const newIconEmoji = prompt('🎨 Иконка (эмодзи):', data.iconEmoji);
         if (newIconEmoji === null) return;
+
+        const newVisitDate = prompt('📅 Дата последнего посещения (ГГГГ-ММ-ДД):', data.lastVisitDate || '');
+        const lastVisitDate = newVisitDate ? newVisitDate.trim() : null;
         
         data.name = newName;
         data.description = newDesc;
@@ -838,6 +896,7 @@
         data.status = newStatus;
         data.markerSize = markerSize;
         data.iconEmoji = newIconEmoji || '🏚️';
+        data.lastVisitDate = lastVisitDate;
         
         const newIcon = createMarkerIcon(guardLevel, markerSize, newStatus, data.iconEmoji);
         marker.setIcon(newIcon);
@@ -846,10 +905,27 @@
         marker.openPopup();
       }
 
+      function isOldVisit(dateStr) {
+        if (!dateStr) return false;
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return false;
+        const visitDate = new Date(parts[0], parts[1] - 1, parts[2]);
+        const now = new Date();
+        const diffDays = (now - visitDate) / (1000 * 60 * 60 * 24);
+        return diffDays > 30;
+      }
+
       function updatePopup(marker) {
         const d = marker._data;
         const guardEmoji = d.guardLevel <= 2 ? '🟢' : (d.guardLevel <= 5 ? '🟡' : (d.guardLevel <= 7 ? '🟠' : '🔴'));
         const statusText = getStatusText(d.status);
+        let visitHtml = '';
+        if (d.lastVisitDate) {
+          const old = isOldVisit(d.lastVisitDate);
+          visitHtml = `<div class="visit-date">📅 Проверен: ${d.lastVisitDate} ${old ? '<span class="old-warning">⚠️ Давно не проверялся!</span>' : ''}</div>`;
+        } else {
+          visitHtml = '<div class="visit-date">📅 Нет данных о посещении</div>';
+        }
         const html = `
           <div class="abandoned-popup">
             <h3>${d.iconEmoji || '🏚️'} ${esc(d.name)}</h3>
@@ -857,6 +933,7 @@
             <div class="desc">📋 ${esc(d.description)}</div>
             <div class="guard-level">${guardEmoji} Охрана: ${d.guardLevel}/10</div>
             <div class="status-line">📌 Статус: ${statusText}</div>
+            ${visitHtml}
             <div class="action-buttons">
               <button class="edit-btn" data-id="${d.id}">✏️ Изменить</button>
               <button class="delete-btn" data-id="${d.id}">🗑️ Удалить</button>
@@ -883,6 +960,35 @@
 
       function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+      // Загрузка предустановленных объектов (только если карта пуста)
+      function loadDefaultMarkers() {
+        if (markersData.length > 0) return; // уже что-то загружено
+        
+        const defaults = [
+          { lat: 51.711645, lng: 36.160852, name: 'Бомбоубежища (ККЗ)', desc: 'Состояния 0/10, хабар 0/10', guard: 0, status: 'unchecked', size: 32, icon: '🏚️', visit: '2026-01-15' },
+          { lat: 51.700106, lng: 36.159246, name: 'Бомбоубежища (#505)', desc: 'Состояния 1/10, хабар 0/10', guard: 1, status: 'unchecked', size: 32, icon: '🏚️', visit: '2026-03-20' },
+          { lat: 51.666421, lng: 36.128328, name: 'Бомбоубежища (#123)', desc: 'Состояние 2/10, хабар 1/10', guard: 1, status: 'unchecked', size: 32, icon: '🏚️', visit: '2025-12-01' },
+          { lat: 51.722252, lng: 36.172905, name: 'Поддомник', desc: 'Нет описания', guard: 0, status: 'unchecked', size: 32, icon: '🏚️', visit: null },
+          { lat: 51.747508, lng: 36.193444, name: 'Поддомник', desc: 'Нет описания', guard: 1, status: 'unchecked', size: 32, icon: '🏚️', visit: '2026-06-01' },
+          { lat: 51.745316, lng: 36.224563, name: 'РЖД бомбоубежища #573', desc: 'Состояние 4/10, хабар 0/10', guard: 1, status: 'unchecked', size: 32, icon: '🚇', visit: '2026-05-10' },
+          { lat: 51.730916, lng: 36.261954, name: 'АПЗ заброшенное 11-этажное здание', desc: 'Состояния 3/10, хабар 0/10', guard: 3, status: 'free', size: 32, icon: '🏭', visit: '2026-07-01' }
+        ];
+        
+        defaults.forEach(obj => {
+          addMarker(
+            L.latLng(obj.lat, obj.lng),
+            obj.name,
+            obj.desc,
+            obj.guard,
+            obj.status,
+            obj.size,
+            obj.icon,
+            obj.visit
+          );
+        });
+      }
+
+      // Сохранение/загрузка JSON
       saveJsonBtn.addEventListener('click', () => {
         const data = { markers: markersData, view: { center: map.getCenter(), zoom: map.getZoom() } };
         const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
@@ -912,7 +1018,8 @@
                   m.guardLevel || 0, 
                   m.status || 'unchecked', 
                   m.markerSize || 32, 
-                  m.iconEmoji || '🏚️'
+                  m.iconEmoji || '🏚️',
+                  m.lastVisitDate
                 );
               });
             }
@@ -985,7 +1092,7 @@
                 const lng = parseFloat(parts[0]);
                 const lat = parseFloat(parts[1]);
                 if (!isNaN(lat) && !isNaN(lng)) {
-                  addMarker(L.latLng(lat, lng), name, desc, 0, 'unchecked', 32, '🏚️');
+                  addMarker(L.latLng(lat, lng), name, desc, 0, 'unchecked', 32, '🏚️', null);
                   added++;
                 }
               }
@@ -1009,7 +1116,9 @@
         }
       });
 
+      // Инициализация
       setActiveLayerButton(layerSchemeBtn);
+      loadDefaultMarkers(); // добавит объекты только при пустой карте
       updateTotalCount();
     })();
   </script>
