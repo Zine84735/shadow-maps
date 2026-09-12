@@ -1,1126 +1,1529 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=1.5, viewport-fit=cover">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#1e1e1e">
-  <title>Заброшенные объекты</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=1.5, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f1419">
+<title>Карта заброшенных объектов</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --bg: #0f1419; --panel: #1a2128; --panel-2: #232b34; --border: #2f3944;
+    --text: #e6edf3; --text-dim: #8b96a3; --accent: #f59e0b; --accent-hover: #fbbf24;
+    --red: #ef4444; --green: #10b981; --blue: #3b82f6;
+    --shadow: 0 8px 24px rgba(0,0,0,0.5);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; line-height: 1.4; }
+  #map { height: 100%; width: 100%; background: #1a2128; }
 
-  <!-- Встроенный манифест для PWA -->
-  <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogItCb0LDQsdGA0L7RiNC10L3QvdGL0LUg0L7QsdGK0LXQutGC0YsiLAogICJzaG9ydF9uYW1lIjogItCb0LDQsdGA0L7RiNC10L3QutC4IiwKICAic3RhcnRfdXJsIjogIi4vaW5kZXguaHRtbCIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzFlMWUxZSIsCiAgInRoZW1lX2NvbG9yIjogIiMxZTFlMWUiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUIyWlhKemFXOXVJREV3TUNCd2NtOTJhV1FnTVRBd0lISmxjM04wYjNJZ01UQXdJSE4wZVcxaFoyVWdTVzVuYzJVZ2MzUnlaV1FnYVc1bWN5QmhjM04wYVdOaGRDQWdNakF3TURFZ1BpQThMM04yWno9IiwKICAgICAgInNpemVzIjogIjE5MngxOTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9zdmcreG1sIgogICAgfQogIF0KfQ==">
-  
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    }
-    body, html {
-      height: 100%;
-      width: 100%;
-      overflow: hidden;
-      background: #1e1e1e;
-    }
-    #map {
-      height: 100%;
-      width: 100%;
-      background: #2d2d2d;
-    }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 52px;
+    background: rgba(15,20,25,0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border); display: flex; align-items: center;
+    gap: 10px; padding: 0 12px; z-index: 900; }
+  .topbar-title { font-size: 14px; font-weight: 600; flex: 1; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; }
+  .topbar-count { font-size: 12px; color: var(--text-dim); padding: 3px 10px;
+    background: var(--panel-2); border-radius: 100px; border: 1px solid var(--border); }
+  .topbar-count b { color: var(--accent); }
 
-    .leaflet-control-zoom {
-      display: none !important;
-    }
+  .icon-btn { position: relative; width: 40px; height: 40px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background .15s, transform .1s; flex-shrink: 0; }
+  .icon-btn:hover { background: var(--panel-2); }
+  .icon-btn:active { transform: scale(0.94); }
+  .icon-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .icon-btn.active { background: var(--accent); border-color: var(--accent); color: #1a1a1a; }
+  .icon-btn .dot { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px;
+    background: var(--green); border-radius: 50%; border: 2px solid var(--panel); }
 
-    .custom-zoom {
-      position: absolute;
-      bottom: 30px;
-      right: 20px;
-      z-index: 1000;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .custom-zoom button {
-      width: 48px;
-      height: 48px;
-      background: rgba(20, 20, 20, 0.9);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      border-radius: 14px;
-      color: #e0e0e0;
-      font-size: 26px;
-      font-weight: bold;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.6);
-      transition: all 0.2s;
-      line-height: 1;
-      user-select: none;
-    }
-    .custom-zoom button:hover {
-      background: #2a2a2a;
-      border-color: rgba(255,255,255,0.4);
-      transform: scale(1.05);
-    }
-    .custom-zoom button:active {
-      transform: scale(0.95);
-      background: #3a3a3a;
-    }
+  .map-controls-left { position: absolute; left: 14px; bottom: 24px; display: flex;
+    flex-direction: column; gap: 8px; z-index: 800; }
+  .map-controls-right { position: absolute; right: 14px; bottom: 24px; display: flex;
+    flex-direction: column; gap: 8px; z-index: 800; }
+  .map-controls-left .icon-btn, .map-controls-right .icon-btn {
+    width: 46px; height: 46px; border-radius: 12px;
+    background: rgba(26,33,40,0.95); box-shadow: var(--shadow); }
 
-    /* Кнопки слева внизу */
-    .left-bottom-buttons {
-      position: absolute;
-      bottom: 30px;
-      left: 20px;
-      z-index: 1000;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .left-bottom-buttons button {
-      width: 48px;
-      height: 48px;
-      background: rgba(20, 20, 20, 0.9);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      border-radius: 14px;
-      color: #e0e0e0;
-      font-size: 26px;
-      font-weight: bold;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.6);
-      transition: all 0.2s;
-      line-height: 1;
-      user-select: none;
-    }
-    .left-bottom-buttons button:hover {
-      background: #2a2a2a;
-      border-color: rgba(255,255,255,0.4);
-      transform: scale(1.05);
-    }
-    .left-bottom-buttons button:active {
-      transform: scale(0.95);
-      background: #3a3a3a;
-    }
+  .panel { position: absolute; top: 66px; left: 14px; width: 320px;
+    max-height: calc(100vh - 90px); background: rgba(26,33,40,0.98);
+    backdrop-filter: blur(16px); border: 1px solid var(--border); border-radius: 16px;
+    box-shadow: var(--shadow); display: flex; flex-direction: column; z-index: 950;
+    overflow: hidden; transform: translateX(-110%); opacity: 0;
+    transition: transform .25s ease, opacity .2s ease; }
+  .panel.open { transform: translateX(0); opacity: 1; }
+  .panel-inner { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+  .panel-inner::-webkit-scrollbar { width: 6px; }
+  .panel-inner::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .section-label { font-size: 11px; font-weight: 600; letter-spacing: .8px;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
 
-    .main-menu-btn {
-      position: absolute;
-      top: 15px;
-      left: 15px;
-      z-index: 1100;
-      width: 50px;
-      height: 50px;
-      background: rgba(20, 20, 20, 0.9);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
-      transition: all 0.25s;
-      color: #ddd;
-      font-size: 24px;
-    }
-    .main-menu-btn:hover {
-      background: #2a2a2a;
-      border-color: rgba(255,255,255,0.4);
-    }
+  .search-row { display: flex; gap: 6px; }
+  .search-row input { flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 12px; color: var(--text); font-size: 14px;
+    outline: none; font-family: inherit; }
+  .search-row input:focus { border-color: var(--accent); }
+  .search-row input::placeholder { color: #5a6672; }
 
-    .menu-panel {
-      position: absolute;
-      top: 75px;
-      left: 15px;
-      z-index: 1090;
-      background: rgba(20, 20, 20, 0.95);
-      backdrop-filter: blur(16px);
-      border-radius: 20px;
-      padding: 15px;
-      box-shadow: 0 12px 35px rgba(0,0,0,0.8);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      display: none;
-      flex-direction: column;
-      gap: 8px;
-      min-width: 270px;
-      max-width: 300px;
-      color: #e0e0e0;
-      max-height: 80vh;
-      overflow-y: auto;
-    }
-    .menu-panel.visible {
-      display: flex;
-    }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 11px 14px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
+    color: var(--text); font-size: 14px; font-weight: 500; font-family: inherit;
+    cursor: pointer; text-align: left; transition: background .15s, border-color .15s;
+    text-decoration: none; }
+  .btn:hover { background: #2a343f; border-color: #3d4956; }
+  .btn:active { transform: scale(0.98); }
+  .btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #1a1a1a; font-weight: 600; }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn.active { background: var(--accent); border-color: var(--accent); color: #1a1a1a; font-weight: 600; }
+  .btn.online { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+  .btn.online:hover { background: #2563eb; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 
-    .menu-btn {
-      background: rgba(50, 50, 50, 0.8);
-      border: 1px solid rgba(255,255,255,0.15);
-      padding: 10px 14px;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: 0.2s;
-      color: #f0f0f0;
-      width: 100%;
-      text-align: left;
-    }
-    .menu-btn:hover {
-      background: #3d3d3d;
-      border-color: #5a5a5a;
-    }
-    .menu-btn.active-mode {
-      background: #b45309;
-      border-color: #d97706;
-      color: white;
-      box-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
-    }
+  .search-results { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; }
+  .search-result { padding: 9px 12px; background: var(--panel-2); border: 1px solid transparent;
+    border-radius: 8px; cursor: pointer; font-size: 13px; display: flex;
+    justify-content: space-between; align-items: center; gap: 8px; }
+  .search-result:hover { border-color: var(--accent); }
+  .search-result-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+  .search-result-guard { font-size: 11px; color: var(--text-dim); background: var(--bg);
+    padding: 2px 7px; border-radius: 6px; }
 
-    .separator {
-      height: 1px;
-      background: rgba(255,255,255,0.2);
-      margin: 2px 0;
-    }
+  .divider { height: 1px; background: var(--border); margin: 2px 0; }
 
-    .section-title {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #a0a0a0;
-      margin: 2px 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+  @media (max-width: 720px) {
+    .panel { top: auto; bottom: 0; left: 0; right: 0; width: 100%; max-height: 72vh;
+      border-radius: 20px 20px 0 0; border-left: none; border-right: none; border-bottom: none;
+      transform: translateY(110%); }
+    .panel.open { transform: translateY(0); }
+    .panel-inner { padding: 18px 16px 24px; }
+    .topbar { height: 48px; padding: 0 10px; gap: 8px; }
+    .topbar-title { font-size: 13px; }
+    .topbar-count { font-size: 11px; }
+    .icon-btn { width: 38px; height: 38px; }
+    .map-controls-left .icon-btn, .map-controls-right .icon-btn { width: 50px; height: 50px; }
+  }
 
-    .search-container {
-      display: flex;
-      gap: 6px;
-    }
-    .search-container input {
-      flex: 1;
-      background: rgba(40, 40, 40, 0.9);
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 10px;
-      padding: 8px 12px;
-      color: #f0f0f0;
-      font-size: 14px;
-      outline: none;
-    }
-    .search-container input::placeholder {
-      color: #888;
-    }
-    .search-container button {
-      background: #2563eb;
-      border: none;
-      border-radius: 10px;
-      padding: 8px 12px;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .search-container button:hover {
-      background: #1d4ed8;
-    }
+  .custom-marker { background: none !important; border: none !important; }
+  .marker-pin-svg { display: block; cursor: pointer;
+    filter: drop-shadow(0 3px 4px rgba(0,0,0,0.55)); transition: transform .15s; }
+  .marker-pin-svg:hover { transform: scale(1.1); }
 
-    .search-results {
-      max-height: 150px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .search-result-item {
-      background: rgba(50,50,50,0.7);
-      padding: 8px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 13px;
-      border: 1px solid transparent;
-      transition: 0.15s;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .search-result-item:hover {
-      background: #3d3d3d;
-      border-color: #d97706;
-    }
-    .search-result-item .guard-badge {
-      background: #b45309;
-      color: white;
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-size: 11px;
-      font-weight: bold;
-    }
+  .leaflet-popup-content-wrapper { background: var(--panel) !important; color: var(--text) !important;
+    border-radius: 14px !important; border: 1px solid var(--border);
+    box-shadow: var(--shadow) !important; padding: 0 !important; }
+  .leaflet-popup-content { margin: 0 !important; width: auto !important; }
+  .leaflet-popup-tip { background: var(--panel) !important; border: 1px solid var(--border); }
+  .leaflet-popup-close-button { color: var(--text-dim) !important; padding: 8px 10px 0 0 !important;
+    font-size: 20px !important; }
+  .leaflet-popup-close-button:hover { color: var(--text) !important; }
 
-    .counter-badge {
-      background: #d97706;
-      color: #000;
-      font-weight: bold;
-      padding: 2px 10px;
-      border-radius: 12px;
-      font-size: 13px;
-    }
+  .popup { padding: 14px; min-width: 250px; max-width: 320px; }
+  .popup-title { font-size: 16px; font-weight: 600; margin-bottom: 10px;
+    padding-right: 18px; line-height: 1.3; word-break: break-word; }
 
-    .abandoned-popup {
-      background: #1f1f1f;
-      color: #e5e5e5;
-      border-radius: 16px;
-      padding: 14px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.8);
-      border-left: 5px solid #d97706;
-      min-width: 220px;
-    }
-    .abandoned-popup h3 {
-      margin: 0 0 8px;
-      font-size: 17px;
-      color: #fbbf24;
-    }
-    .abandoned-popup .coords {
-      font-family: monospace;
-      background: #2d2d2d;
-      padding: 6px 10px;
-      border-radius: 10px;
-      margin: 8px 0;
-      font-size: 13px;
-      color: #b0b0b0;
-    }
-    .abandoned-popup .desc {
-      color: #cbd5e1;
-      margin: 8px 0;
-      font-style: italic;
-      background: #262626;
-      padding: 8px;
-      border-radius: 8px;
-    }
-    .abandoned-popup .guard-level,
-    .abandoned-popup .status-line,
-    .abandoned-popup .visit-date {
-      font-size: 13px;
-      margin: 5px 0;
-    }
-    .abandoned-popup .old-warning {
-      color: #f87171;
-      font-weight: bold;
-    }
-    .abandoned-popup .action-buttons {
-      display: flex;
-      gap: 6px;
-      margin-top: 8px;
-    }
-    .abandoned-popup .action-buttons button {
-      flex: 1;
-      border: none;
-      color: white;
-      padding: 7px 12px;
-      border-radius: 20px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: 0.2s;
-      font-size: 13px;
-    }
-    .abandoned-popup .edit-btn {
-      background: #2563eb;
-    }
-    .abandoned-popup .edit-btn:hover {
-      background: #1d4ed8;
-    }
-    .abandoned-popup .delete-btn {
-      background: #b91c1c;
-    }
-    .abandoned-popup .delete-btn:hover {
-      background: #dc2626;
-    }
+  .popup-coords { font-family: ui-monospace, monospace; font-size: 12px; color: var(--text-dim);
+    background: var(--bg); padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);
+    margin-bottom: 10px; user-select: all; }
+  .popup-desc { background: var(--bg); padding: 9px 11px; border-radius: 8px;
+    border: 1px solid var(--border); font-size: 13px; margin-bottom: 10px;
+    word-break: break-word; line-height: 1.45; }
+  .popup-row { display: flex; justify-content: space-between; gap: 8px;
+    font-size: 13px; margin-bottom: 6px; }
+  .popup-row-label { color: var(--text-dim); font-size: 12px; }
+  .popup-row-value { font-weight: 600; }
+  .popup-status { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-bottom: 6px; }
+  .popup-status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 
-    .leaflet-popup-content-wrapper {
-      background: transparent;
-      box-shadow: none;
-      border-radius: 0;
-    }
-    .leaflet-popup-tip {
-      background: #1f1f1f;
-    }
+  /* Photo block (внизу попапа) */
+  .popup-photos-title {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 12px; padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: .5px; font-weight: 600;
+  }
+  .popup-photos-title button {
+    background: none; border: none; color: var(--accent); font-size: 12px;
+    font-weight: 600; cursor: pointer; padding: 2px 6px; border-radius: 6px;
+    text-transform: none; letter-spacing: 0;
+  }
+  .popup-photos-title button:hover { background: rgba(245,158,11,0.15); }
 
-    .mode-indicator {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.85);
-      color: #fbbf24;
-      padding: 8px 20px;
-      border-radius: 25px;
-      font-weight: 600;
-      font-size: 14px;
-      z-index: 1000;
-      display: none;
-      border: 1px solid #d97706;
-    }
+  .popup-photo-strip {
+    display: flex; gap: 6px; overflow-x: auto; margin-top: 8px;
+    padding-bottom: 4px;
+  }
+  .popup-photo-strip::-webkit-scrollbar { height: 6px; }
+  .popup-photo-strip::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .popup-photo-strip img {
+    width: 68px; height: 68px; object-fit: cover; border-radius: 8px;
+    cursor: pointer; flex-shrink: 0; border: 1px solid var(--border);
+    transition: transform .15s, border-color .15s;
+  }
+  .popup-photo-strip img:hover { transform: scale(1.05); border-color: var(--accent); }
 
-    .layer-btn.active-layer {
-      background: #2563eb;
-      border-color: #3b82f6;
-      color: white;
-      box-shadow: 0 0 12px rgba(59,130,246,0.5);
-    }
+  .popup-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .popup-actions button { padding: 8px 10px; border: 1px solid var(--border);
+    border-radius: 8px; background: var(--panel-2); color: var(--text);
+    font-size: 12px; font-weight: 500; font-family: inherit; cursor: pointer; }
+  .popup-actions button:hover { background: #2a343f; }
+  .popup-actions .btn-edit { color: #93c5fd; }
+  .popup-actions .btn-delete { color: #fca5a5; }
 
-    .panorama-modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.9);
-      z-index: 9999;
-      flex-direction: column;
-    }
-    .panorama-modal.active {
-      display: flex;
-    }
-    .panorama-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 15px 20px;
-      background: #1a1a1a;
-      color: white;
-    }
-    .panorama-header button {
-      background: #b91c1c;
-      border: none;
-      color: white;
-      padding: 10px 20px;
-      border-radius: 10px;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    #panoramaFrame {
-      flex: 1;
-      border: none;
-      width: 100%;
-    }
+  .mode-banner { position: absolute; top: 66px; left: 50%; transform: translateX(-50%);
+    background: rgba(245,158,11,0.95); color: #1a1a1a; padding: 9px 18px;
+    border-radius: 100px; font-size: 13px; font-weight: 600; z-index: 850;
+    display: none; box-shadow: 0 6px 20px rgba(0,0,0,0.4); white-space: nowrap; }
+  .mode-banner.show { display: block; }
+  @media (max-width: 720px) { .mode-banner { top: 60px; font-size: 12px; padding: 8px 14px; } }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: scale(0.3); }
-      to { opacity: 1; transform: scale(1); }
-    }
-    .marker-animate {
-      animation: fadeIn 0.4s ease-out;
-    }
-  </style>
+  .modal { position: fixed; inset: 0; background: #0a0e12; z-index: 9999;
+    display: none; flex-direction: column; }
+  .modal.show { display: flex; }
+  .modal-header { height: 52px; padding: 0 16px; background: var(--panel);
+    border-bottom: 1px solid var(--border); display: flex; align-items: center;
+    justify-content: space-between; gap: 12px; }
+  .modal-title { font-size: 14px; font-weight: 600; }
+  .modal-close { background: var(--red); border: none; color: #fff; padding: 7px 16px;
+    border-radius: 8px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; }
+  .modal-close:hover { background: #dc2626; }
+
+  /* Lightbox with navigation */
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.96); z-index: 10000;
+    display: none; align-items: center; justify-content: center; padding: 20px; }
+  .lightbox.show { display: flex; }
+  .lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px;
+    object-fit: contain; user-select: none; }
+  .lightbox-close { position: absolute; top: 16px; right: 16px; width: 44px; height: 44px;
+    background: rgba(0,0,0,0.7); border: 1px solid #444; border-radius: 50%;
+    color: #fff; font-size: 24px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; z-index: 1; }
+  .lightbox-nav { position: absolute; top: 50%; transform: translateY(-50%);
+    width: 52px; height: 52px; background: rgba(0,0,0,0.7); border: 1px solid #444;
+    border-radius: 50%; color: #fff; font-size: 26px; line-height: 1; cursor: pointer;
+    display: none; align-items: center; justify-content: center; z-index: 1; }
+  .lightbox.show .lightbox-nav.active { display: flex; }
+  .lightbox-nav:hover { background: rgba(40,40,40,0.95); }
+  .lightbox-prev { left: 16px; }
+  .lightbox-next { right: 16px; }
+  .lightbox-counter { position: absolute; bottom: 20px; left: 50%;
+    transform: translateX(-50%); background: rgba(0,0,0,0.7);
+    color: #fff; padding: 8px 16px; border-radius: 100px;
+    font-size: 13px; font-weight: 600; z-index: 1; }
+
+  .form-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px); z-index: 9999; display: none;
+    align-items: center; justify-content: center; padding: 16px; }
+  .form-modal.show { display: flex; }
+  .form-card { width: 100%; max-width: 440px; max-height: 92vh; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; overflow: hidden; }
+  .form-header { padding: 16px 20px; border-bottom: 1px solid var(--border);
+    font-size: 15px; font-weight: 600; display: flex; justify-content: space-between;
+    align-items: center; }
+  .form-header button { background: none; border: none; color: var(--text-dim);
+    font-size: 22px; cursor: pointer; padding: 0 4px; }
+  .form-header button:hover { color: var(--text); }
+  .form-body { padding: 16px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; color: var(--text-dim); font-weight: 500; }
+  .field input, .field textarea, .field select {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 9px;
+    padding: 10px 12px; color: var(--text); font-size: 14px; font-family: inherit;
+    outline: none; width: 100%; }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--accent); }
+  .field textarea { resize: vertical; min-height: 68px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .slider-row { display: flex; align-items: center; gap: 12px; }
+  .slider-row input[type="range"] { flex: 1; -webkit-appearance: none; height: 4px;
+    background: var(--border); border-radius: 2px; outline: none; padding: 0; border: none; }
+  .slider-row input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none;
+    width: 20px; height: 20px; background: var(--accent); border-radius: 50%;
+    cursor: pointer; border: 3px solid var(--panel); }
+  .slider-row input[type="range"]::-moz-range-thumb { width: 20px; height: 20px;
+    background: var(--accent); border-radius: 50%; cursor: pointer; border: 3px solid var(--panel); }
+  .slider-value { min-width: 32px; text-align: right; font-weight: 700;
+    color: var(--accent); font-variant-numeric: tabular-nums; }
+
+  .photo-upload-area { display: flex; flex-wrap: wrap; gap: 8px; }
+  .photo-thumb { position: relative; width: 72px; height: 72px; border-radius: 10px;
+    overflow: hidden; border: 1px solid var(--border); }
+  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-thumb-remove { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px;
+    background: rgba(239,68,68,0.95); border: none; border-radius: 50%; color: #fff;
+    font-size: 14px; line-height: 1; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; padding: 0; }
+  .photo-add-btn { width: 72px; height: 72px; border: 2px dashed var(--border);
+    border-radius: 10px; background: transparent; color: var(--text-dim);
+    font-size: 28px; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; transition: border-color .15s, color .15s;
+    text-decoration: none; }
+  .photo-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .photo-add-btn.disabled { opacity: 0.4; pointer-events: none; }
+
+  .form-footer { padding: 14px 20px; border-top: 1px solid var(--border);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .form-footer button { padding: 11px; border-radius: 10px; font-size: 14px;
+    font-weight: 600; font-family: inherit; cursor: pointer;
+    border: 1px solid var(--border); background: var(--panel-2); color: var(--text); }
+  .form-footer button:hover { background: #2a343f; }
+  .form-footer .save { background: var(--accent); border-color: var(--accent); color: #1a1a1a; }
+  .form-footer .save:hover { background: var(--accent-hover); }
+
+  .online-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; max-width: 520px; margin: 0 auto; width: 100%; overflow-y: auto; }
+  .online-status { padding: 12px 14px; background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 10px; font-size: 13px; line-height: 1.5; }
+  .online-status.connected { border-color: var(--green); background: rgba(16,185,129,0.1); }
+  .online-status.error { border-color: var(--red); background: rgba(239,68,68,0.1); }
+  .online-status.warn { border-color: var(--accent); background: rgba(245,158,11,0.1); }
+  .online-url-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px; margin-top: 8px; }
+  .online-url { font-family: ui-monospace, monospace; font-size: 12px; word-break: break-all;
+    color: var(--accent); user-select: all; line-height: 1.5; }
+  .online-hint { color: var(--text-dim); font-size: 12px; line-height: 1.5; }
+  .online-hint code { background: var(--bg); padding: 2px 5px; border-radius: 4px;
+    font-size: 11px; color: var(--accent); }
+</style>
 </head>
 <body>
-  <div id="map"></div>
 
-  <!-- Кнопки слева внизу: геолокация и север -->
-  <div class="left-bottom-buttons">
-    <button id="geolocationBtn" title="Моё местоположение">📍</button>
-    <button id="northBtn" title="Повернуть карту на север">🧭</button>
-  </div>
+<div id="map"></div>
 
-  <div class="custom-zoom">
-    <button id="zoomInBtn" title="Приблизить">+</button>
-    <button id="zoomOutBtn" title="Отдалить">−</button>
-  </div>
+<div class="topbar">
+  <button class="icon-btn" id="menuToggle" title="Меню">
+    <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="topbar-title">Карта объектов</div>
+  <div class="topbar-count">Объектов: <b id="countTotal">0</b></div>
+</div>
 
-  <div class="main-menu-btn" id="menuToggleBtn" title="Меню">☰</div>
-
-  <div class="menu-panel" id="menuPanel">
-    <div class="section-title">
-      <span>🔍 Поиск объектов</span>
-      <span class="counter-badge" id="totalCount">0</span>
-    </div>
-    <div class="search-container">
-      <input type="text" id="searchInput" placeholder="Название или описание...">
-      <button id="searchBtn">🔍</button>
+<div class="panel" id="panel">
+  <div class="panel-inner">
+    <div>
+      <div class="section-label">Поиск</div>
+      <div class="search-row">
+        <input type="text" id="searchInput" placeholder="Название или описание">
+        <button class="icon-btn" id="searchBtn" title="Искать">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        </button>
+      </div>
     </div>
     <div class="search-results" id="searchResults"></div>
-    
-    <div class="separator"></div>
-    
-    <button id="addMarkerMenuBtn" class="menu-btn">🏚️ Добавить объект</button>
-    <button id="panoramaMenuBtn" class="menu-btn">🌐 Открыть панораму</button>
-    
-    <div class="separator"></div>
-    <div class="section-title">🗺️ Слои карты</div>
-    <button id="layerSchemeBtn" class="menu-btn layer-btn active-layer">🗺️ Схема</button>
-    <button id="layerSatelliteBtn" class="menu-btn layer-btn">🛰️ Спутник</button>
-    <button id="layerHybridBtn" class="menu-btn layer-btn">🌐 Гибрид</button>
 
-    <div class="separator"></div>
-    <button id="saveJsonBtn" class="menu-btn">💾 Сохранить JSON</button>
-    <button id="loadJsonBtn" class="menu-btn">📂 Загрузить JSON</button>
-    <button id="exportKmlBtn" class="menu-btn">📄 Экспорт KML</button>
-    <button id="importKmlBtn" class="menu-btn">📥 Импорт KML</button>
-    <input type="file" id="jsonFileInput" accept=".json" style="display: none;">
-    <input type="file" id="kmlFileInput" accept=".kml" style="display: none;">
-  </div>
+    <div class="divider"></div>
 
-  <div class="panorama-modal" id="panoramaModal">
-    <div class="panorama-header">
-      <span style="font-weight:bold; font-size:18px;">🌐 Google Street View</span>
-      <button id="closePanoramaBtn">✕ Закрыть</button>
+    <div>
+      <div class="section-label">Действия</div>
+      <button class="btn primary" id="addMarkerBtn">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Добавить объект
+      </button>
     </div>
-    <iframe id="panoramaFrame" allowfullscreen></iframe>
+
+    <div class="btn-grid">
+      <button class="btn" id="panoramaBtn">
+        <svg viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-10a7 7 0 1 1 14 0c0 5.5-7 10-7 10z"/><circle cx="12" cy="10" r="2.5"/></svg>
+        Панорама
+      </button>
+      <button class="btn" id="geolocationBtn">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+        Я здесь
+      </button>
+    </div>
+
+    <button class="btn online" id="onlineBtn">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+      <span id="onlineBtnText">Общая карта (онлайн)</span>
+    </button>
+
+    <div>
+      <div class="section-label">Слои</div>
+      <div class="btn-grid">
+        <button class="btn layer-btn active" data-layer="scheme">Схема</button>
+        <button class="btn layer-btn" data-layer="satellite">Спутник</button>
+        <button class="btn layer-btn" data-layer="hybrid" style="grid-column: span 2;">Гибрид</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
+      <div class="section-label">Файлы</div>
+      <div class="btn-grid">
+        <button class="btn" id="shareBtn" style="grid-column: span 2;">
+          <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>
+          Поделиться ссылкой
+        </button>
+        <button class="btn" id="saveJsonBtn">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Сохранить
+        </button>
+        <button class="btn" id="loadJsonBtn">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Загрузить
+        </button>
+        <button class="btn" id="exportKmlBtn" style="grid-column: span 2;">Экспорт в KML</button>
+        <button class="btn" id="importKmlBtn" style="grid-column: span 2;">Импорт из KML</button>
+      </div>
+    </div>
   </div>
+</div>
 
-  <div class="mode-indicator" id="modeIndicator">📍 Кликните по карте для добавления объекта</div>
+<div class="map-controls-left">
+  <button class="icon-btn" id="northBtn" title="Ориентировать на север">
+    <svg viewBox="0 0 24 24"><path d="M12 3l3.5 9L12 10.5 8.5 12z" fill="currentColor" stroke="none"/><path d="M12 21l-3.5-9L12 13.5l3.5-1.5z"/></svg>
+  </button>
+</div>
 
-  <script>
-    // Регистрация Service Worker для кеширования
-    if ('serviceWorker' in navigator) {
-      const swCode = `
-        const CACHE_NAME = 'abandoned-map-v1';
-        const urlsToCache = [
-          'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-          'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-        ];
-        self.addEventListener('install', event => {
-          event.waitUntil(
-            caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
-          );
-        });
-        self.addEventListener('fetch', event => {
-          event.respondWith(
-            caches.match(event.request).then(response => response || fetch(event.request))
-          );
-        });
-      `;
-      const blob = new Blob([swCode], { type: 'application/javascript' });
-      const swUrl = URL.createObjectURL(blob);
-      navigator.serviceWorker.register(swUrl);
+<div class="map-controls-right">
+  <button class="icon-btn" id="zoomInBtn" title="Приблизить">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+  <button class="icon-btn" id="zoomOutBtn" title="Отдалить">
+    <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+</div>
+
+<div class="mode-banner" id="modeBanner">Кликните на карту, чтобы поставить объект</div>
+
+<!-- Panorama chooser -->
+<div class="modal" id="panoramaModal">
+  <div class="modal-header">
+    <div class="modal-title">Открыть панораму</div>
+    <button class="modal-close" id="closePanorama">Закрыть</button>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:24px; overflow-y:auto;">
+    <div style="text-align:center; color:var(--text-dim); max-width:400px; font-size:14px;">
+      Панорама откроется в новой вкладке на текущем центре карты. Выберите сервис:
+    </div>
+    <button class="btn primary" id="openGooglePanorama" style="max-width:320px;">
+      <svg viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-10a7 7 0 1 1 14 0c0 5.5-7 10-7 10z"/><circle cx="12" cy="10" r="2.5"/></svg>
+      Google Street View
+    </button>
+    <button class="btn primary" id="openYandexPanorama" style="max-width:320px;">
+      <svg viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-10a7 7 0 1 1 14 0c0 5.5-7 10-7 10z"/><circle cx="12" cy="10" r="2.5"/></svg>
+      Яндекс.Панорамы
+    </button>
+    <div style="text-align:center; color:var(--text-dim); font-size:12px; max-width:340px; margin-top:12px;">
+      Координаты центра: <span id="panoCoords" style="font-family:monospace; color:var(--accent);"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Online modal -->
+<div class="modal" id="onlineModal">
+  <div class="modal-header">
+    <div class="modal-title">Общая карта (онлайн)</div>
+    <button class="modal-close" id="closeOnline">Закрыть</button>
+  </div>
+  <div class="online-body">
+    <div class="online-status" id="onlineStatus">Не подключено</div>
+    <div id="fileWarn" style="display:none;" class="online-status warn">
+      <b>Внимание:</b> сайт открыт как локальный файл (<code>file://</code>). Онлайн-карта и любые запросы к серверам заблокированы браузером из соображений безопасности.
+      <br><br>
+      <b>Решения:</b>
+      <br>1. Откройте сайт через <b>GitHub Pages</b> (или любой хостинг) — тогда всё заработает.
+      <br>2. Или используйте кнопку <b>«Поделиться ссылкой»</b> — она кодирует объекты прямо в URL и работает без интернета.
+      <br>3. Или <b>«Сохранить» (JSON)</b> — отправите файл другу.
+    </div>
+    <div id="onlineIdle" style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn primary" id="createSharedBtn">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Создать общую карту
+      </button>
+      <div class="divider"></div>
+      <div class="section-label" style="margin-bottom:0;">Подключиться к существующей</div>
+      <input type="text" id="joinSharedInput" placeholder="Вставьте ссылку или ID" style="background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:10px 12px; color:var(--text); font-size:14px; font-family:inherit; outline:none; width:100%;">
+      <button class="btn" id="joinSharedBtn">Подключиться</button>
+    </div>
+    <div id="onlineActive" style="display:none; flex-direction:column; gap:10px;">
+      <div class="online-url-box">
+        <div class="section-label" style="margin-bottom:6px;">Ссылка для друзей</div>
+        <div class="online-url" id="sharedUrlText"></div>
+      </div>
+      <button class="btn primary" id="copyShareLinkBtn">
+        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Скопировать ссылку
+      </button>
+      <button class="btn" id="syncNowBtn">
+        <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Синхронизировать сейчас
+      </button>
+      <button class="btn" id="disconnectBtn" style="color:#fca5a5;">Отключиться</button>
+    </div>
+    <div class="online-hint">
+      Общая карта позволяет делиться объектами в реальном времени. Отправьте ссылку другу — он увидит те же объекты. <b style="color:#fca5a5;">Фотографии не синхронизируются</b> (слишком большой размер). Для офлайн-обмена используйте «Поделиться ссылкой».
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox with navigation -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightboxClose">×</button>
+  <button class="lightbox-nav lightbox-prev" id="lightboxPrev">‹</button>
+  <button class="lightbox-nav lightbox-next" id="lightboxNext">›</button>
+  <img id="lightboxImg" src="" alt="">
+  <div class="lightbox-counter" id="lightboxCounter"></div>
+</div>
+
+<!-- Form modal -->
+<div class="form-modal" id="formModal">
+  <div class="form-card">
+    <div class="form-header">
+      <span id="formTitle">Новый объект</span>
+      <button id="formClose" title="Закрыть">×</button>
+    </div>
+    <div class="form-body">
+      <div class="field">
+        <label for="fName">Название</label>
+        <input type="text" id="fName" placeholder="Например, Бомбоубежище №5" maxlength="80">
+      </div>
+      <div class="field">
+        <label for="fDesc">Описание</label>
+        <textarea id="fDesc" placeholder="Состояние, особенности, как попасть..." maxlength="500"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="fStatus">Статус</label>
+          <select id="fStatus">
+            <option value="unchecked">Не проверен</option>
+            <option value="guarded">Охраняется</option>
+            <option value="free">Свободен</option>
+            <option value="demolished">Снесён</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fDate">Дата проверки</label>
+          <input type="date" id="fDate">
+        </div>
+      </div>
+      <div class="field">
+        <label>Уровень охраны</label>
+        <div class="slider-row">
+          <input type="range" id="fGuard" min="0" max="10" value="3">
+          <span class="slider-value" id="fGuardValue">3</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Размер метки</label>
+        <div class="slider-row">
+          <input type="range" id="fSize" min="24" max="64" value="40">
+          <span class="slider-value" id="fSizeValue">40</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Фотографии (до 6)</label>
+        <div class="photo-upload-area" id="photoUploadArea">
+          <label for="photoFileInput" class="photo-add-btn" id="photoAddLabel" title="Добавить фото">+</label>
+        </div>
+      </div>
+    </div>
+    <div class="form-footer">
+      <button id="formCancel">Отмена</button>
+      <button class="save" id="formSave">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="jsonFileInput" accept=".json" style="position:fixed;left:-10000px;opacity:0;pointer-events:none">
+<input type="file" id="kmlFileInput" accept=".kml" style="position:fixed;left:-10000px;opacity:0;pointer-events:none">
+<input type="file" id="photoFileInput" accept="image/*" multiple style="position:fixed;left:-10000px;opacity:0;pointer-events:none">
+
+<script>
+(function() {
+  'use strict';
+
+  // ===== Map =====
+  const map = L.map('map', {
+    center: [51.7402, 36.1846], zoom: 12,
+    minZoom: 2, maxZoom: 19, zoomControl: false, worldCopyJump: false
+  });
+
+  const schemeLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap', maxZoom: 19 });
+  const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '© Esri', maxZoom: 19 });
+  const labelsLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap', maxZoom: 19, opacity: 0.75 });
+  const hybridGroup = L.layerGroup([satelliteLayer, labelsLayer]);
+
+  let currentBaseLayer = schemeLayer;
+  schemeLayer.addTo(map);
+
+  const markersLayer = L.layerGroup().addTo(map);
+  let markersData = [];
+  let addMarkerMode = false;
+  let editingId = null;
+  let pendingLatLng = null;
+  let formPhotos = [];
+
+  // Lightbox state
+  let lightboxPhotos = [];
+  let lightboxIndex = 0;
+
+  // Online sync
+  let sharedUrl = null;
+  let syncTimer = null;
+  const SYNC_INTERVAL = 20000;
+
+  // ===== DOM =====
+  const $ = id => document.getElementById(id);
+  const panel = $('panel');
+  const menuToggle = $('menuToggle');
+  const countTotal = $('countTotal');
+  const searchInput = $('searchInput');
+  const searchBtn = $('searchBtn');
+  const searchResults = $('searchResults');
+  const addMarkerBtn = $('addMarkerBtn');
+  const panoramaBtn = $('panoramaBtn');
+  const geolocationBtn = $('geolocationBtn');
+  const northBtn = $('northBtn');
+  const zoomInBtn = $('zoomInBtn');
+  const zoomOutBtn = $('zoomOutBtn');
+  const modeBanner = $('modeBanner');
+  const panoramaModal = $('panoramaModal');
+  const onlineModal = $('onlineModal');
+  const formModal = $('formModal');
+  const lightbox = $('lightbox');
+  const lightboxImg = $('lightboxImg');
+  const lightboxCounter = $('lightboxCounter');
+  const lightboxPrev = $('lightboxPrev');
+  const lightboxNext = $('lightboxNext');
+
+  // ===== Utils =====
+  function guardColor(level) {
+    const hue = 120 - (level / 10) * 120;
+    return `hsl(${hue}, 62%, ${42 + (level / 10) * 8}%)`;
+  }
+  function statusColor(s) {
+    return { unchecked:'#f59e0b', guarded:'#ef4444', free:'#10b981', demolished:'#6b7280' }[s] || '#f59e0b';
+  }
+  function statusLabel(s) {
+    return { unchecked:'Не проверен', guarded:'Охраняется', free:'Свободен', demolished:'Снесён' }[s] || s;
+  }
+  function esc(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function isOldVisit(dateStr) {
+    if (!dateStr) return false;
+    const p = dateStr.split('-');
+    if (p.length !== 3) return false;
+    const dt = new Date(+p[0], +p[1]-1, +p[2]);
+    return (Date.now() - dt.getTime()) > 1000*60*60*24*30;
+  }
+
+  // ===== Marker icon =====
+  function buildMarkerIcon(size, guard, status) {
+    const color = guardColor(guard);
+    const w = size, h = Math.round(size * 1.4);
+    const fontSize = Math.max(10, Math.round(size * 0.42));
+    return L.divIcon({
+      className: 'custom-marker',
+      html: `<svg class="marker-pin-svg" width="${w}" height="${h}" viewBox="0 0 30 42">
+        <path d="M15 40 C15 40 3 24 3 14 A12 12 0 1 1 27 14 C27 24 15 40 15 40 Z"
+              fill="${color}" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>
+        <text x="15" y="19" text-anchor="middle" fill="#ffffff"
+              font-size="${fontSize}" font-weight="700"
+              font-family="-apple-system, Segoe UI, sans-serif">${guard}</text>
+        <circle cx="25" cy="7" r="4.2" fill="${statusColor(status)}" stroke="#ffffff" stroke-width="1.5"/>
+      </svg>`,
+      iconSize: [w, h],
+      iconAnchor: [w/2, h],
+      popupAnchor: [0, -h + 6]
+    });
+  }
+
+  // ===== Marker CRUD =====
+  function addMarker(data, opts = {}) {
+    const id = data.id || (Date.now() + Math.random().toString(36).slice(2));
+    const d = {
+      id: id,
+      lat: +data.lat, lng: +data.lng,
+      name: data.name || 'Без названия',
+      description: data.description || '',
+      status: data.status || 'unchecked',
+      guardLevel: typeof data.guardLevel === 'number' ? data.guardLevel : 0,
+      markerSize: data.markerSize || 40,
+      lastVisitDate: data.lastVisitDate || null,
+      photos: Array.isArray(data.photos) ? data.photos.slice(0, 6) : []
+    };
+
+    const marker = L.marker([d.lat, d.lng], {
+      icon: buildMarkerIcon(d.markerSize, d.guardLevel, d.status),
+      draggable: true, autoPan: true, riseOnHover: true
+    }).addTo(markersLayer);
+
+    marker._data = d;
+    markersData.push(d);
+    marker.bindPopup(buildPopupHtml(d), { maxWidth: 340, minWidth: 260 });
+    marker.on('popupopen', () => attachPopupHandlers(marker));
+    marker.on('dragend', () => {
+      const pos = marker.getLatLng();
+      marker._data.lat = pos.lat;
+      marker._data.lng = pos.lng;
+      marker.setPopupContent(buildPopupHtml(marker._data));
+      scheduleSync();
+    });
+
+    if (!opts.silent) {
+      marker.openPopup();
+      updateCount();
+      scheduleSync();
+    }
+    return marker;
+  }
+
+  function refreshMarker(marker) {
+    const d = marker._data;
+    marker.setIcon(buildMarkerIcon(d.markerSize, d.guardLevel, d.status));
+    marker.setPopupContent(buildPopupHtml(d));
+  }
+
+  function findMarker(id) {
+    let found = null;
+    markersLayer.eachLayer(m => { if (m._data && m._data.id === id) found = m; });
+    return found;
+  }
+
+  function buildPopupHtml(d) {
+    const statusTxt = statusLabel(d.status);
+    const statusClr = statusColor(d.status);
+
+    let visitHtml = '';
+    if (d.lastVisitDate) {
+      const old = isOldVisit(d.lastVisitDate);
+      visitHtml = `<div class="popup-row">
+        <span class="popup-row-label">Проверен</span>
+        <span class="popup-row-value">${esc(d.lastVisitDate)}${old ? ' <span style="color:#fca5a5;font-weight:400">· давно</span>' : ''}</span>
+      </div>`;
+    } else {
+      visitHtml = `<div class="popup-row">
+        <span class="popup-row-label">Проверен</span>
+        <span class="popup-row-value" style="color:var(--text-dim);font-weight:400">нет данных</span>
+      </div>`;
     }
 
-    (function() {
-      const map = L.map('map', {
-        center: [55.7558, 37.6173],
-        zoom: 5,
-        minZoom: 2,
-        maxZoom: 19,
-        zoomControl: false,
-        worldCopyJump: false
+    // Photo block внизу (после всех данных)
+    let photosHtml = '';
+    if (d.photos && d.photos.length) {
+      const strip = d.photos.map((p, i) =>
+        `<img src="${p}" data-photo-idx="${i}" alt="">`).join('');
+      photosHtml = `
+        <div class="popup-photos-title">
+          <span>Фото · ${d.photos.length}</span>
+          <button data-action="openGallery" data-id="${d.id}">Открыть галерею</button>
+        </div>
+        <div class="popup-photo-strip">${strip}</div>`;
+    }
+
+    return `<div class="popup">
+      <div class="popup-title">${esc(d.name)}</div>
+      <div class="popup-coords">${d.lat.toFixed(6)}, ${d.lng.toFixed(6)}</div>
+      ${d.description ? `<div class="popup-desc">${esc(d.description)}</div>` : ''}
+      <div class="popup-row">
+        <span class="popup-row-label">Охрана</span>
+        <span class="popup-row-value" style="color:${guardColor(d.guardLevel)}">${d.guardLevel} / 10</span>
+      </div>
+      <div class="popup-status">
+        <span class="popup-status-dot" style="background:${statusClr}"></span>
+        <span>${statusTxt}</span>
+      </div>
+      ${visitHtml}
+      ${photosHtml}
+      <div class="popup-actions">
+        <button class="btn-edit" data-action="edit" data-id="${d.id}">Изменить</button>
+        <button class="btn-delete" data-action="delete" data-id="${d.id}">Удалить</button>
+      </div>
+    </div>`;
+  }
+
+  function attachPopupHandlers(marker) {
+    setTimeout(() => {
+      const popupEl = marker.getPopup() && marker.getPopup().getElement();
+      if (!popupEl) return;
+      popupEl.querySelectorAll('button[data-action]').forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const a = btn.dataset.action, id = btn.dataset.id;
+          if (a === 'edit') openEditForm(id);
+          else if (a === 'delete') deleteMarker(id);
+          else if (a === 'openGallery') openGallery(id, 0);
+        };
       });
-
-      const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OSM',
-        maxZoom: 19
+      popupEl.querySelectorAll('img[data-photo-idx]').forEach(img => {
+        img.onclick = () => {
+          const id = marker._data.id;
+          const idx = parseInt(img.dataset.photoIdx, 10) || 0;
+          openGallery(id, idx);
+        };
       });
-      const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '© Esri',
-        maxZoom: 19
-      });
-      const labelsLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
-        attribution: '© OSM',
-        maxZoom: 19,
-        opacity: 0.7
-      });
-      const hybridGroup = L.layerGroup([satelliteLayer, labelsLayer]);
-      
-      let currentBaseLayer = osmLayer;
-      currentBaseLayer.addTo(map);
+    }, 30);
+  }
 
-      const markersLayer = L.layerGroup().addTo(map);
-      let markersData = [];
-      let addMarkerMode = false;
-      
-      const menuToggleBtn = document.getElementById('menuToggleBtn');
-      const menuPanel = document.getElementById('menuPanel');
-      const addMarkerMenuBtn = document.getElementById('addMarkerMenuBtn');
-      const geolocationBtn = document.getElementById('geolocationBtn');
-      const northBtn = document.getElementById('northBtn');
-      const panoramaMenuBtn = document.getElementById('panoramaMenuBtn');
-      const saveJsonBtn = document.getElementById('saveJsonBtn');
-      const loadJsonBtn = document.getElementById('loadJsonBtn');
-      const exportKmlBtn = document.getElementById('exportKmlBtn');
-      const importKmlBtn = document.getElementById('importKmlBtn');
-      const jsonFileInput = document.getElementById('jsonFileInput');
-      const kmlFileInput = document.getElementById('kmlFileInput');
-      const modeIndicator = document.getElementById('modeIndicator');
-      const layerSchemeBtn = document.getElementById('layerSchemeBtn');
-      const layerSatelliteBtn = document.getElementById('layerSatelliteBtn');
-      const layerHybridBtn = document.getElementById('layerHybridBtn');
-      const layerBtns = [layerSchemeBtn, layerSatelliteBtn, layerHybridBtn];
-      
-      const zoomInBtn = document.getElementById('zoomInBtn');
-      const zoomOutBtn = document.getElementById('zoomOutBtn');
-      
-      const panoramaModal = document.getElementById('panoramaModal');
-      const panoramaFrame = document.getElementById('panoramaFrame');
-      const closePanoramaBtn = document.getElementById('closePanoramaBtn');
+  // ===== Lightbox gallery =====
+  function openGallery(markerId, startIndex) {
+    const m = findMarker(markerId);
+    if (!m || !m._data.photos || !m._data.photos.length) return;
+    lightboxPhotos = m._data.photos.slice();
+    lightboxIndex = Math.max(0, Math.min(startIndex, lightboxPhotos.length - 1));
+    updateLightbox();
+    lightbox.classList.add('show');
+    if (lightboxPhotos.length > 1) {
+      lightboxPrev.classList.add('active');
+      lightboxNext.classList.add('active');
+    } else {
+      lightboxPrev.classList.remove('active');
+      lightboxNext.classList.remove('active');
+    }
+  }
 
-      const searchInput = document.getElementById('searchInput');
-      const searchBtn = document.getElementById('searchBtn');
-      const searchResults = document.getElementById('searchResults');
-      const totalCount = document.getElementById('totalCount');
+  function updateLightbox() {
+    if (!lightboxPhotos.length) return;
+    lightboxImg.src = lightboxPhotos[lightboxIndex];
+    lightboxCounter.textContent = `${lightboxIndex + 1} / ${lightboxPhotos.length}`;
+    lightboxCounter.style.display = lightboxPhotos.length > 1 ? 'block' : 'none';
+  }
 
-      zoomInBtn.addEventListener('click', () => map.zoomIn());
-      zoomOutBtn.addEventListener('click', () => map.zoomOut());
+  function lightboxNextPhoto() {
+    if (lightboxPhotos.length < 2) return;
+    lightboxIndex = (lightboxIndex + 1) % lightboxPhotos.length;
+    updateLightbox();
+  }
+  function lightboxPrevPhoto() {
+    if (lightboxPhotos.length < 2) return;
+    lightboxIndex = (lightboxIndex - 1 + lightboxPhotos.length) % lightboxPhotos.length;
+    updateLightbox();
+  }
+  function closeLightbox() {
+    lightbox.classList.remove('show');
+    lightboxImg.src = '';
+    lightboxPhotos = [];
+  }
 
-      // Кнопка "Север"
-      northBtn.addEventListener('click', () => {
-        map.getContainer().style.transform = '';
-        // сбросим также возможный поворот через внутренний обработчик
-        if (map._rotate) map._rotate = 0;
-      });
+  lightboxNext.onclick = (e) => { e.stopPropagation(); lightboxNextPhoto(); };
+  lightboxPrev.onclick = (e) => { e.stopPropagation(); lightboxPrevPhoto(); };
+  $('lightboxClose').onclick = closeLightbox;
+  lightbox.onclick = (e) => { if (e.target === lightbox || e.target === lightboxImg) closeLightbox(); };
 
-      menuToggleBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        menuPanel.classList.toggle('visible');
-      });
+  // Touch swipe for lightbox
+  let touchStartX = null;
+  lightbox.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) touchStartX = e.touches[0].clientX;
+  });
+  lightbox.addEventListener('touchend', (e) => {
+    if (touchStartX === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 60) {
+      if (dx < 0) lightboxNextPhoto();
+      else lightboxPrevPhoto();
+    }
+    touchStartX = null;
+  });
 
-      document.addEventListener('click', (e) => {
-        if (!menuPanel.contains(e.target) && e.target !== menuToggleBtn) {
-          menuPanel.classList.remove('visible');
-        }
-      });
+  function deleteMarker(id) {
+    markersData = markersData.filter(m => m.id !== id);
+    markersLayer.eachLayer(m => { if (m._data && m._data.id === id) markersLayer.removeLayer(m); });
+    updateCount();
+    runSearch();
+    scheduleSync();
+  }
 
-      function updateTotalCount() {
-        totalCount.textContent = markersData.length;
+  function updateCount() { countTotal.textContent = markersData.length; }
+
+  // ===== Form =====
+  function renderFormPhotos() {
+    const area = $('photoUploadArea');
+    const addLabel = $('photoAddLabel');
+    area.querySelectorAll('.photo-thumb').forEach(el => el.remove());
+    formPhotos.forEach((src, i) => {
+      const t = document.createElement('div');
+      t.className = 'photo-thumb';
+      t.innerHTML = `<img src="${src}"><button type="button" class="photo-thumb-remove" data-idx="${i}">×</button>`;
+      t.querySelector('.photo-thumb-remove').onclick = (e) => {
+        e.preventDefault();
+        formPhotos.splice(i, 1);
+        renderFormPhotos();
+      };
+      area.insertBefore(t, addLabel);
+    });
+    addLabel.classList.toggle('disabled', formPhotos.length >= 6);
+  }
+
+  function openNewForm(latlng) {
+    editingId = null;
+    pendingLatLng = latlng;
+    formPhotos = [];
+    $('formTitle').textContent = 'Новый объект';
+    $('fName').value = '';
+    $('fDesc').value = '';
+    $('fStatus').value = 'unchecked';
+    $('fDate').value = '';
+    $('fGuard').value = 3; $('fGuardValue').textContent = '3';
+    $('fSize').value = 40; $('fSizeValue').textContent = '40';
+    renderFormPhotos();
+    formModal.classList.add('show');
+    setTimeout(() => $('fName').focus(), 100);
+  }
+
+  function openEditForm(id) {
+    const m = findMarker(id);
+    if (!m) return;
+    const d = m._data;
+    editingId = id;
+    formPhotos = (d.photos || []).slice();
+    $('formTitle').textContent = 'Редактировать объект';
+    $('fName').value = d.name;
+    $('fDesc').value = d.description;
+    $('fStatus').value = d.status;
+    $('fDate').value = d.lastVisitDate || '';
+    $('fGuard').value = d.guardLevel; $('fGuardValue').textContent = d.guardLevel;
+    $('fSize').value = d.markerSize; $('fSizeValue').textContent = d.markerSize;
+    renderFormPhotos();
+    formModal.classList.add('show');
+    map.closePopup();
+  }
+
+  function closeForm() {
+    formModal.classList.remove('show');
+    editingId = null;
+    pendingLatLng = null;
+    formPhotos = [];
+  }
+
+  $('fGuard').addEventListener('input', () => $('fGuardValue').textContent = $('fGuard').value);
+  $('fSize').addEventListener('input', () => $('fSizeValue').textContent = $('fSize').value);
+  $('formClose').onclick = closeForm;
+  $('formCancel').onclick = closeForm;
+  formModal.addEventListener('click', (e) => { if (e.target === formModal) closeForm(); });
+
+  // Photo input
+  $('photoFileInput').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!files.length) return;
+    for (const f of files) {
+      if (formPhotos.length >= 6) break;
+      try {
+        const dataUrl = await compressImage(f);
+        formPhotos.push(dataUrl);
+        renderFormPhotos();
+      } catch(err) {
+        console.error('Photo error:', err);
+        alert('Не удалось загрузить фото: ' + err.message);
       }
+    }
+  });
 
-      function setActiveLayerButton(btn) {
-        layerBtns.forEach(b => b.classList.remove('active-layer'));
-        btn.classList.add('active-layer');
+  function compressImage(file, maxWidth = 900, quality = 0.72) {
+    return new Promise((resolve, reject) => {
+      if (!file.type.startsWith('image/')) {
+        reject(new Error('файл не является изображением'));
+        return;
       }
-
-      function switchBaseLayer(newLayer, btn) {
-        if (currentBaseLayer === hybridGroup) {
-          map.removeLayer(hybridGroup);
-        } else {
-          map.removeLayer(currentBaseLayer);
-        }
-        if (newLayer === hybridGroup) {
-          hybridGroup.addTo(map);
-        } else {
-          newLayer.addTo(map);
-        }
-        currentBaseLayer = newLayer;
-        setActiveLayerButton(btn);
-      }
-
-      layerSchemeBtn.addEventListener('click', () => switchBaseLayer(osmLayer, layerSchemeBtn));
-      layerSatelliteBtn.addEventListener('click', () => switchBaseLayer(satelliteLayer, layerSatelliteBtn));
-      layerHybridBtn.addEventListener('click', () => switchBaseLayer(hybridGroup, layerHybridBtn));
-
-      panoramaMenuBtn.addEventListener('click', () => {
-        const center = map.getCenter();
-        panoramaFrame.src = `https://www.google.com/maps/embed?pb=!4v1!6m8!1m3!1d0!2d${center.lng.toFixed(6)}!3d${center.lat.toFixed(6)}!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sru!2sru`;
-        panoramaModal.classList.add('active');
-        menuPanel.classList.remove('visible');
-      });
-
-      closePanoramaBtn.addEventListener('click', () => {
-        panoramaModal.classList.remove('active');
-        panoramaFrame.src = '';
-      });
-
-      geolocationBtn.addEventListener('click', () => {
-        if (!navigator.geolocation) {
-          alert('Геолокация не поддерживается вашим браузером');
-          return;
-        }
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            const userLatLng = L.latLng(lat, lng);
-            
-            const userMarker = L.marker(userLatLng, {
-              icon: L.divIcon({
-                className: 'custom-marker',
-                html: '<div style="background:#3b82f6; width:20px; height:20px; border-radius:50%; border:3px solid white; box-shadow:0 0 15px #3b82f6;"></div>',
-                iconSize: [20,20],
-                iconAnchor: [10,10]
-              })
-            }).addTo(map).bindPopup('📍 Вы здесь').openPopup();
-            
-            if (markersData.length > 0) {
-              let minDist = Infinity;
-              let closestMarker = null;
-              markersData.forEach(m => {
-                const dist = map.distance(userLatLng, L.latLng(m.lat, m.lng));
-                if (dist < minDist) {
-                  minDist = dist;
-                  closestMarker = m;
-                }
-              });
-              if (closestMarker) {
-                const distKm = (minDist / 1000).toFixed(2);
-                alert(`Ближайший объект: ${closestMarker.name} (${distKm} км)`);
-                const bounds = L.latLngBounds([userLatLng, L.latLng(closestMarker.lat, closestMarker.lng)]);
-                map.fitBounds(bounds, { padding: [50, 50] });
-                markersLayer.eachLayer(layer => {
-                  if (layer._data && layer._data.id === closestMarker.id) {
-                    layer.openPopup();
-                  }
-                });
-              } else {
-                map.setView(userLatLng, 15);
-              }
-            } else {
-              map.setView(userLatLng, 15);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            let w = img.naturalWidth || img.width;
+            let h = img.naturalHeight || img.height;
+            if (w > maxWidth) {
+              h = Math.round(h * maxWidth / w);
+              w = maxWidth;
             }
-            
-            setTimeout(() => map.removeLayer(userMarker), 30000);
-          },
-          (err) => {
-            alert('Ошибка геолокации: ' + err.message);
-          }
-        );
-      });
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+            resolve(dataUrl);
+          } catch(err) { reject(err); }
+        };
+        img.onerror = () => reject(new Error('не удалось открыть изображение'));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error('ошибка чтения файла'));
+      reader.readAsDataURL(file);
+    });
+  }
 
-      function performSearch() {
-        const query = searchInput.value.trim().toLowerCase();
-        searchResults.innerHTML = '';
-        
-        if (!query || markersData.length === 0) {
-          if (markersData.length === 0 && query) {
-            searchResults.innerHTML = '<div style="padding:8px;color:#888;">Ничего не найдено</div>';
-          }
-          return;
-        }
+  // Save form
+  $('formSave').onclick = () => {
+    const name = $('fName').value.trim();
+    if (!name) { $('fName').focus(); return; }
 
-        const filtered = markersData.filter(m => 
-          m.name.toLowerCase().includes(query) || 
-          m.description.toLowerCase().includes(query)
-        );
+    const payload = {
+      name,
+      description: $('fDesc').value.trim(),
+      status: $('fStatus').value,
+      lastVisitDate: $('fDate').value || null,
+      guardLevel: parseInt($('fGuard').value, 10),
+      markerSize: parseInt($('fSize').value, 10),
+      photos: formPhotos.slice()
+    };
 
-        if (filtered.length === 0) {
-          searchResults.innerHTML = '<div style="padding:8px;color:#888;">Ничего не найдено</div>';
-          return;
-        }
+    if (editingId) {
+      const m = findMarker(editingId);
+      if (m) {
+        Object.assign(m._data, payload);
+        refreshMarker(m);
+        m.openPopup();
+      }
+    } else if (pendingLatLng) {
+      payload.lat = pendingLatLng.lat;
+      payload.lng = pendingLatLng.lng;
+      addMarker(payload);
+    }
+    closeForm();
+    updateCount();
+    runSearch();
+    scheduleSync();
+  };
 
-        filtered.forEach(m => {
-          const div = document.createElement('div');
-          div.className = 'search-result-item';
-          div.innerHTML = `
-            <span>${m.iconEmoji || '🏚️'} ${esc(m.name)}</span>
-            <span class="guard-badge">👮 ${m.guardLevel}/10</span>
-          `;
-          div.addEventListener('click', () => {
-            map.setView([m.lat, m.lng], 16);
-            markersLayer.eachLayer(layer => {
-              if (layer._data && layer._data.id === m.id) {
-                layer.openPopup();
-              }
-            });
-            menuPanel.classList.remove('visible');
+  // ===== Menu =====
+  menuToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    panel.classList.toggle('open');
+  });
+  document.addEventListener('click', (e) => {
+    if (window.innerWidth > 720 && !panel.contains(e.target) && e.target !== menuToggle) {
+      panel.classList.remove('open');
+    }
+  });
+
+  // ===== Add mode =====
+  function enableAddMode() {
+    addMarkerMode = true;
+    addMarkerBtn.classList.add('active');
+    modeBanner.classList.add('show');
+    map.getContainer().style.cursor = 'crosshair';
+    panel.classList.remove('open');
+  }
+  function disableAddMode() {
+    addMarkerMode = false;
+    addMarkerBtn.classList.remove('active');
+    modeBanner.classList.remove('show');
+    map.getContainer().style.cursor = '';
+  }
+  addMarkerBtn.addEventListener('click', () => addMarkerMode ? disableAddMode() : enableAddMode());
+  map.on('click', (e) => {
+    if (!addMarkerMode) return;
+    disableAddMode();
+    openNewForm(e.latlng);
+  });
+
+  // ===== Zoom / North =====
+  zoomInBtn.onclick = () => map.zoomIn();
+  zoomOutBtn.onclick = () => map.zoomOut();
+  northBtn.onclick = () => {
+    map.getContainer().style.transform = '';
+    map.invalidateSize();
+  };
+
+  // ===== Layers =====
+  document.querySelectorAll('.layer-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const layer = btn.dataset.layer;
+      if (currentBaseLayer === hybridGroup) map.removeLayer(hybridGroup);
+      else map.removeLayer(currentBaseLayer);
+      if (layer === 'scheme') { currentBaseLayer = schemeLayer; schemeLayer.addTo(map); }
+      else if (layer === 'satellite') { currentBaseLayer = satelliteLayer; satelliteLayer.addTo(map); }
+      else { currentBaseLayer = hybridGroup; hybridGroup.addTo(map); }
+    });
+  });
+
+  // ===== Search =====
+  function runSearch() {
+    const q = searchInput.value.trim().toLowerCase();
+    searchResults.innerHTML = '';
+    if (!q) return;
+    const matches = markersData.filter(m =>
+      m.name.toLowerCase().includes(q) || (m.description || '').toLowerCase().includes(q));
+    if (!matches.length) {
+      searchResults.innerHTML = '<div style="padding:8px;color:var(--text-dim);font-size:13px;">Ничего не найдено</div>';
+      return;
+    }
+    matches.slice(0, 60).forEach(m => {
+      const el = document.createElement('div');
+      el.className = 'search-result';
+      el.innerHTML = `<span class="search-result-name">${esc(m.name)}</span>
+        <span class="search-result-guard">${m.guardLevel}/10</span>`;
+      el.onclick = () => {
+        map.setView([m.lat, m.lng], 16);
+        const mk = findMarker(m.id);
+        if (mk) mk.openPopup();
+        if (window.innerWidth <= 720) panel.classList.remove('open');
+      };
+      searchResults.appendChild(el);
+    });
+  }
+  searchBtn.onclick = runSearch;
+  searchInput.addEventListener('input', () => searchInput.value ? runSearch() : (searchResults.innerHTML = ''));
+  searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') runSearch(); });
+
+  // ===== Panorama =====
+  panoramaBtn.onclick = () => {
+    const c = map.getCenter();
+    $('panoCoords').textContent = `${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}`;
+    panoramaModal.classList.add('show');
+    panel.classList.remove('open');
+  };
+  $('closePanorama').onclick = () => panoramaModal.classList.remove('show');
+  $('openGooglePanorama').onclick = () => {
+    const c = map.getCenter();
+    const url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${c.lat.toFixed(6)},${c.lng.toFixed(6)}`;
+    window.open(url, '_blank', 'noopener');
+  };
+  $('openYandexPanorama').onclick = () => {
+    const c = map.getCenter();
+    const url = `https://yandex.ru/maps/?ll=${c.lng.toFixed(6)},${c.lat.toFixed(6)}&z=17&l=stv&panorama%5Bpoint%5D=${c.lng.toFixed(6)}%2C${c.lat.toFixed(6)}&panorama%5Bdirection%5D=0%2C0&panorama%5Bspan%5D=120%2C75`;
+    window.open(url, '_blank', 'noopener');
+  };
+
+  // ===== Geolocation =====
+  geolocationBtn.onclick = () => {
+    if (!navigator.geolocation) { alert('Геолокация недоступна'); return; }
+    geolocationBtn.classList.add('active');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        geolocationBtn.classList.remove('active');
+        const me = L.latLng(pos.coords.latitude, pos.coords.longitude);
+        const userMarker = L.marker(me, {
+          icon: L.divIcon({
+            className: 'custom-marker',
+            html: `<div style="width:18px;height:18px;border-radius:50%;background:#3b82f6;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.7), 0 0 20px #3b82f6;"></div>`,
+            iconSize: [18, 18], iconAnchor: [9, 9]
+          })
+        }).addTo(map).bindPopup('<div class="popup"><div class="popup-title">Ваше местоположение</div></div>').openPopup();
+
+        if (markersData.length) {
+          let minD = Infinity, closest = null;
+          markersData.forEach(m => {
+            const d = map.distance(me, L.latLng(m.lat, m.lng));
+            if (d < minD) { minD = d; closest = m; }
           });
-          searchResults.appendChild(div);
-        });
-      }
-
-      searchBtn.addEventListener('click', performSearch);
-      searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') performSearch();
-      });
-
-      function enableAddMarkerMode() {
-        addMarkerMode = true;
-        addMarkerMenuBtn.classList.add('active-mode');
-        modeIndicator.style.display = 'block';
-        map.getContainer().style.cursor = 'crosshair';
-        menuPanel.classList.remove('visible');
-      }
-
-      function disableAddMarkerMode() {
-        addMarkerMode = false;
-        addMarkerMenuBtn.classList.remove('active-mode');
-        modeIndicator.style.display = 'none';
-        map.getContainer().style.cursor = '';
-      }
-
-      addMarkerMenuBtn.addEventListener('click', () => {
-        addMarkerMode ? disableAddMarkerMode() : enableAddMarkerMode();
-      });
-
-      map.on('click', (e) => {
-        if (!addMarkerMode) return;
-        
-        const name = prompt('🏚️ Название объекта:', `Объект №${markersData.length + 1}`);
-        if (name === null) return;
-        
-        const description = prompt('📝 Описание:', 'Заброшено');
-        if (description === null) return;
-        
-        const guard = prompt('👮 Уровень охраны (0-10):', '3');
-        if (guard === null) return;
-        const guardLevel = Math.min(10, Math.max(0, parseInt(guard) || 0));
-        
-        const statusPrompt = prompt('📌 Статус:\n1 - не проверен\n2 - охраняется\n3 - свободен\n4 - снесён', '1');
-        if (statusPrompt === null) return;
-        const statusMap = { '1': 'unchecked', '2': 'guarded', '3': 'free', '4': 'demolished' };
-        const status = statusMap[statusPrompt] || 'unchecked';
-        
-        const size = prompt('📏 Размер метки (20-60 пикселей):', '32');
-        if (size === null) return;
-        const markerSize = Math.min(60, Math.max(20, parseInt(size) || 32));
-        
-        const iconEmoji = prompt('🎨 Иконка (🏚️, 🏭, 🏥, 🏰, ⛪, 🚇 или свой эмодзи):', '🏚️');
-        if (iconEmoji === null) return;
-
-        // Дата последнего посещения
-        const visitDate = prompt('📅 Дата последнего посещения (ГГГГ-ММ-ДД, можно пусто):', '');
-        const lastVisitDate = visitDate ? visitDate.trim() : null;
-        
-        addMarker(e.latlng, name, description, guardLevel, status, markerSize, iconEmoji || '🏚️', lastVisitDate);
-      });
-
-      function getStatusColor(status) {
-        switch(status) {
-          case 'unchecked': return '#fbbf24';
-          case 'guarded': return '#ef4444';
-          case 'free': return '#22c55e';
-          case 'demolished': return '#6b7280';
-          default: return '#ffffff';
-        }
-      }
-
-      function getStatusText(status) {
-        switch(status) {
-          case 'unchecked': return '❓ Не проверен';
-          case 'guarded': return '🔒 Охраняется';
-          case 'free': return '✅ Свободен';
-          case 'demolished': return '💀 Снесён';
-          default: return status;
-        }
-      }
-
-      function createMarkerIcon(guard, size, status, iconEmoji) {
-        const intensity = guard / 10;
-        const red = Math.round(185 + (220 - 185) * intensity);
-        const green = Math.round(28 + (38 - 28) * (1 - intensity));
-        const blue = Math.round(28 + (38 - 28) * (1 - intensity));
-        const bgColor = `rgb(${red},${green},${blue})`;
-        const borderColor = getStatusColor(status);
-        const halfSize = size / 2;
-        const fontSize = size * 0.5;
-        
-        return L.divIcon({
-          className: 'custom-marker marker-animate',
-          html: `<div style="background:${bgColor}; width:${size}px; height:${size}px; border-radius:50%; border:3px solid ${borderColor}; box-shadow:0 0 12px black; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:${fontSize}px; animation: fadeIn 0.4s ease-out;">${iconEmoji}</div>`,
-          iconSize: [size, size],
-          iconAnchor: [halfSize, halfSize],
-          popupAnchor: [0, -halfSize]
-        });
-      }
-
-      function addMarker(latlng, name, desc, guard, status, size, iconEmoji, lastVisitDate = null) {
-        const id = Date.now() + Math.random().toString(36);
-        const icon = createMarkerIcon(guard, size, status, iconEmoji);
-
-        const marker = L.marker(latlng, { icon, draggable: true, autoPan: true }).addTo(markersLayer);
-        const data = { 
-          id, lat: latlng.lat, lng: latlng.lng, 
-          name, description: desc, guardLevel: guard, 
-          status, markerSize: size, iconEmoji, lastVisitDate 
-        };
-        markersData.push(data);
-        marker._data = data;
-        updatePopup(marker);
-        updateTotalCount();
-        
-        marker.on('dragend', () => {
-          const pos = marker.getLatLng();
-          marker._data.lat = pos.lat;
-          marker._data.lng = pos.lng;
-          updatePopup(marker);
-        });
-        
-        marker.openPopup();
-        return marker;
-      }
-
-      function findMarkerById(id) {
-        let found = null;
-        markersLayer.eachLayer(layer => {
-          if (layer._data && layer._data.id === id) {
-            found = layer;
+          if (closest) {
+            const km = (minD / 1000).toFixed(2);
+            map.fitBounds(L.latLngBounds([me, L.latLng(closest.lat, closest.lng)]), { padding: [60,60], maxZoom: 16 });
+            const mk = findMarker(closest.id);
+            if (mk) setTimeout(() => mk.openPopup(), 400);
+            setTimeout(() => alert(`Ближайший: ${closest.name} — ${km} км`), 200);
           }
-        });
-        return found;
-      }
-
-      function editMarker(id) {
-        const marker = findMarkerById(id);
-        if (!marker) return;
-        const data = marker._data;
-        
-        const newName = prompt('🏚️ Название объекта:', data.name);
-        if (newName === null) return;
-        
-        const newDesc = prompt('📝 Описание:', data.description);
-        if (newDesc === null) return;
-        
-        const newGuard = prompt('👮 Уровень охраны (0-10):', data.guardLevel);
-        if (newGuard === null) return;
-        const guardLevel = Math.min(10, Math.max(0, parseInt(newGuard) || 0));
-        
-        const statusMap = { '1': 'unchecked', '2': 'guarded', '3': 'free', '4': 'demolished' };
-        const currentStatusKey = Object.keys(statusMap).find(k => statusMap[k] === data.status) || '1';
-        const newStatusPrompt = prompt('📌 Статус:\n1 - не проверен\n2 - охраняется\n3 - свободен\n4 - снесён', currentStatusKey);
-        if (newStatusPrompt === null) return;
-        const newStatus = statusMap[newStatusPrompt] || data.status;
-        
-        const newSize = prompt('📏 Размер метки (20-60 пикселей):', data.markerSize);
-        if (newSize === null) return;
-        const markerSize = Math.min(60, Math.max(20, parseInt(newSize) || 32));
-        
-        const newIconEmoji = prompt('🎨 Иконка (эмодзи):', data.iconEmoji);
-        if (newIconEmoji === null) return;
-
-        const newVisitDate = prompt('📅 Дата последнего посещения (ГГГГ-ММ-ДД):', data.lastVisitDate || '');
-        const lastVisitDate = newVisitDate ? newVisitDate.trim() : null;
-        
-        data.name = newName;
-        data.description = newDesc;
-        data.guardLevel = guardLevel;
-        data.status = newStatus;
-        data.markerSize = markerSize;
-        data.iconEmoji = newIconEmoji || '🏚️';
-        data.lastVisitDate = lastVisitDate;
-        
-        const newIcon = createMarkerIcon(guardLevel, markerSize, newStatus, data.iconEmoji);
-        marker.setIcon(newIcon);
-        
-        updatePopup(marker);
-        marker.openPopup();
-      }
-
-      function isOldVisit(dateStr) {
-        if (!dateStr) return false;
-        const parts = dateStr.split('-');
-        if (parts.length !== 3) return false;
-        const visitDate = new Date(parts[0], parts[1] - 1, parts[2]);
-        const now = new Date();
-        const diffDays = (now - visitDate) / (1000 * 60 * 60 * 24);
-        return diffDays > 30;
-      }
-
-      function updatePopup(marker) {
-        const d = marker._data;
-        const guardEmoji = d.guardLevel <= 2 ? '🟢' : (d.guardLevel <= 5 ? '🟡' : (d.guardLevel <= 7 ? '🟠' : '🔴'));
-        const statusText = getStatusText(d.status);
-        let visitHtml = '';
-        if (d.lastVisitDate) {
-          const old = isOldVisit(d.lastVisitDate);
-          visitHtml = `<div class="visit-date">📅 Проверен: ${d.lastVisitDate} ${old ? '<span class="old-warning">⚠️ Давно не проверялся!</span>' : ''}</div>`;
         } else {
-          visitHtml = '<div class="visit-date">📅 Нет данных о посещении</div>';
+          map.setView(me, 15);
         }
-        const html = `
-          <div class="abandoned-popup">
-            <h3>${d.iconEmoji || '🏚️'} ${esc(d.name)}</h3>
-            <div class="coords">📍 ${d.lat.toFixed(6)}, ${d.lng.toFixed(6)}</div>
-            <div class="desc">📋 ${esc(d.description)}</div>
-            <div class="guard-level">${guardEmoji} Охрана: ${d.guardLevel}/10</div>
-            <div class="status-line">📌 Статус: ${statusText}</div>
-            ${visitHtml}
-            <div class="action-buttons">
-              <button class="edit-btn" data-id="${d.id}">✏️ Изменить</button>
-              <button class="delete-btn" data-id="${d.id}">🗑️ Удалить</button>
-            </div>
-          </div>`;
-        marker.unbindPopup();
-        marker.bindPopup(html, { maxWidth: 280 });
-        marker.on('popupopen', () => {
-          setTimeout(() => {
-            const editBtn = document.querySelector(`.edit-btn[data-id="${d.id}"]`);
-            const deleteBtn = document.querySelector(`.delete-btn[data-id="${d.id}"]`);
-            if (editBtn) editBtn.onclick = (e) => { e.stopPropagation(); editMarker(d.id); };
-            if (deleteBtn) deleteBtn.onclick = (e) => { e.stopPropagation(); deleteMarker(d.id); };
-          }, 50);
-        });
-      }
+        setTimeout(() => map.removeLayer(userMarker), 45000);
+        if (window.innerWidth <= 720) panel.classList.remove('open');
+      },
+      (err) => { geolocationBtn.classList.remove('active'); alert('Ошибка геолокации: ' + err.message); },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  };
 
-      function deleteMarker(id) {
-        markersData = markersData.filter(m => m.id !== id);
-        markersLayer.eachLayer(l => { if (l._data?.id === id) markersLayer.removeLayer(l); });
-        updateTotalCount();
-        performSearch();
-      }
+  // ===== JSON =====
+  $('saveJsonBtn').onclick = () => {
+    const data = { app: 'abandoned-map', version: 3, markers: markersData, view: { center: map.getCenter(), zoom: map.getZoom() } };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `map-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    panel.classList.remove('open');
+  };
 
-      function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-      // Загрузка предустановленных объектов (только если карта пуста)
-      function loadDefaultMarkers() {
-        if (markersData.length > 0) return; // уже что-то загружено
-        
-        const defaults = [
-          { lat: 51.711645, lng: 36.160852, name: 'Бомбоубежища (ККЗ)', desc: 'Состояния 0/10, хабар 0/10', guard: 0, status: 'unchecked', size: 32, icon: '🏚️', visit: '2026-01-15' },
-          { lat: 51.700106, lng: 36.159246, name: 'Бомбоубежища (#505)', desc: 'Состояния 1/10, хабар 0/10', guard: 1, status: 'unchecked', size: 32, icon: '🏚️', visit: '2026-03-20' },
-          { lat: 51.666421, lng: 36.128328, name: 'Бомбоубежища (#123)', desc: 'Состояние 2/10, хабар 1/10', guard: 1, status: 'unchecked', size: 32, icon: '🏚️', visit: '2025-12-01' },
-          { lat: 51.722252, lng: 36.172905, name: 'Поддомник', desc: 'Нет описания', guard: 0, status: 'unchecked', size: 32, icon: '🏚️', visit: null },
-          { lat: 51.747508, lng: 36.193444, name: 'Поддомник', desc: 'Нет описания', guard: 1, status: 'unchecked', size: 32, icon: '🏚️', visit: '2026-06-01' },
-          { lat: 51.745316, lng: 36.224563, name: 'РЖД бомбоубежища #573', desc: 'Состояние 4/10, хабар 0/10', guard: 1, status: 'unchecked', size: 32, icon: '🚇', visit: '2026-05-10' },
-          { lat: 51.730916, lng: 36.261954, name: 'АПЗ заброшенное 11-этажное здание', desc: 'Состояния 3/10, хабар 0/10', guard: 3, status: 'free', size: 32, icon: '🏭', visit: '2026-07-01' }
-        ];
-        
-        defaults.forEach(obj => {
-          addMarker(
-            L.latLng(obj.lat, obj.lng),
-            obj.name,
-            obj.desc,
-            obj.guard,
-            obj.status,
-            obj.size,
-            obj.icon,
-            obj.visit
-          );
-        });
-      }
-
-      // Сохранение/загрузка JSON
-      saveJsonBtn.addEventListener('click', () => {
-        const data = { markers: markersData, view: { center: map.getCenter(), zoom: map.getZoom() } };
-        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `map_${new Date().toISOString().slice(0,10)}.json`;
-        a.click();
-        menuPanel.classList.remove('visible');
-      });
-
-      loadJsonBtn.addEventListener('click', () => { jsonFileInput.click(); menuPanel.classList.remove('visible'); });
-      
-      jsonFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          try {
-            const data = JSON.parse(ev.target.result);
-            markersLayer.clearLayers();
-            markersData = [];
-            if (data.markers) {
-              data.markers.forEach(m => {
-                addMarker(
-                  L.latLng(m.lat, m.lng), 
-                  m.name, m.description, 
-                  m.guardLevel || 0, 
-                  m.status || 'unchecked', 
-                  m.markerSize || 32, 
-                  m.iconEmoji || '🏚️',
-                  m.lastVisitDate
-                );
-              });
-            }
-            updateTotalCount();
-            if (data.view) map.setView(data.view.center, data.view.zoom);
-          } catch(err) { alert('Ошибка файла JSON'); }
-        };
-        reader.readAsText(file);
-        jsonFileInput.value = '';
-      });
-
-      function generateKml() {
-        let kml = `<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2">
-  <Document>
-    <name>Заброшенные объекты</name>`;
-        markersData.forEach(m => {
-          kml += `
-    <Placemark>
-      <name>${escXml(m.name)}</name>
-      <description>${escXml(m.description)} Охрана: ${m.guardLevel}/10 Статус: ${getStatusText(m.status)}</description>
-      <Point>
-        <coordinates>${m.lng},${m.lat},0</coordinates>
-      </Point>
-    </Placemark>`;
-        });
-        kml += `
-  </Document>
-</kml>`;
-        return kml;
-      }
-
-      function escXml(s) {
-        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-      }
-
-      exportKmlBtn.addEventListener('click', () => {
-        const kml = generateKml();
-        const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `objects_${new Date().toISOString().slice(0,10)}.kml`;
-        a.click();
-        menuPanel.classList.remove('visible');
-      });
-
-      importKmlBtn.addEventListener('click', () => { kmlFileInput.click(); menuPanel.classList.remove('visible'); });
-
-      kmlFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          try {
-            const text = ev.target.result;
-            const parser = new DOMParser();
-            const xml = parser.parseFromString(text, 'text/xml');
-            const placemarks = xml.querySelectorAll('Placemark');
-            if (placemarks.length === 0) {
-              alert('KML не содержит меток');
-              return;
-            }
-            let added = 0;
-            placemarks.forEach(pm => {
-              const name = pm.querySelector('name')?.textContent || 'Импорт KML';
-              const desc = pm.querySelector('description')?.textContent || '';
-              const coords = pm.querySelector('coordinates')?.textContent?.trim();
-              if (coords) {
-                const parts = coords.split(',');
-                const lng = parseFloat(parts[0]);
-                const lat = parseFloat(parts[1]);
-                if (!isNaN(lat) && !isNaN(lng)) {
-                  addMarker(L.latLng(lat, lng), name, desc, 0, 'unchecked', 32, '🏚️', null);
-                  added++;
-                }
-              }
-            });
-            updateTotalCount();
-            alert(`Импортировано объектов: ${added}`);
-          } catch(err) {
-            alert('Ошибка обработки KML: ' + err.message);
-          }
-        };
-        reader.readAsText(file);
-        kmlFileInput.value = '';
-      });
-
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          if (addMarkerMode) disableAddMarkerMode();
-          menuPanel.classList.remove('visible');
-          panoramaModal.classList.remove('active');
-          panoramaFrame.src = '';
+  $('loadJsonBtn').onclick = () => $('jsonFileInput').click();
+  $('jsonFileInput').addEventListener('change', (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const r = new FileReader();
+    r.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data.markers || !Array.isArray(data.markers)) throw new Error('Нет поля markers');
+        markersLayer.clearLayers();
+        markersData = [];
+        data.markers.forEach(m => addMarker(m, { silent: true }));
+        updateCount();
+        if (data.view && data.view.center) map.setView(data.view.center, data.view.zoom);
+        else if (markersData.length) {
+          const group = L.featureGroup(markersLayer.getLayers());
+          map.fitBounds(group.getBounds().pad(0.15));
         }
-      });
+      } catch(err) { alert('Ошибка загрузки JSON: ' + err.message); }
+    };
+    r.readAsText(file);
+    $('jsonFileInput').value = '';
+    panel.classList.remove('open');
+  });
 
-      // Инициализация
-      setActiveLayerButton(layerSchemeBtn);
-      loadDefaultMarkers(); // добавит объекты только при пустой карте
-      updateTotalCount();
-    })();
-  </script>
+  // ===== KML =====
+  function escXml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  $('exportKmlBtn').onclick = () => {
+    let kml = '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n<name>Abandoned objects</name>\n';
+    markersData.forEach(m => {
+      const desc = `${m.description || ''}\nОхрана: ${m.guardLevel}/10\nСтатус: ${statusLabel(m.status)}${m.lastVisitDate ? '\nПроверен: ' + m.lastVisitDate : ''}`;
+      kml += `<Placemark>\n<name>${escXml(m.name)}</name>\n<description>${escXml(desc)}</description>\n<Point><coordinates>${m.lng},${m.lat},0</coordinates></Point>\n</Placemark>\n`;
+    });
+    kml += '</Document>\n</kml>';
+    const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `objects-${new Date().toISOString().slice(0,10)}.kml`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    panel.classList.remove('open');
+  };
+  $('importKmlBtn').onclick = () => $('kmlFileInput').click();
+  $('kmlFileInput').addEventListener('change', (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const r = new FileReader();
+    r.onload = (ev) => {
+      try {
+        const xml = new DOMParser().parseFromString(ev.target.result, 'text/xml');
+        const pms = xml.querySelectorAll('Placemark');
+        if (!pms.length) { alert('В KML нет объектов'); return; }
+        let added = 0;
+        pms.forEach(pm => {
+          const name = pm.querySelector('name')?.textContent || 'Объект';
+          const description = pm.querySelector('description')?.textContent || '';
+          const coordEl = pm.querySelector('coordinates');
+          if (!coordEl) return;
+          const parts = coordEl.textContent.trim().split(',');
+          const lng = parseFloat(parts[0]), lat = parseFloat(parts[1]);
+          if (isNaN(lat) || isNaN(lng)) return;
+          let guardLevel = 0;
+          const gm = description.match(/Охрана:\s*(\d+)/);
+          if (gm) guardLevel = Math.min(10, Math.max(0, parseInt(gm[1], 10)));
+          let status = 'unchecked';
+          if (/Охраняется/i.test(description)) status = 'guarded';
+          else if (/Свободен/i.test(description)) status = 'free';
+          else if (/Снес[её]н/i.test(description)) status = 'demolished';
+          addMarker({
+            lat, lng, name,
+            description: description.replace(/Охрана:[^\n]*\n?/g, '').replace(/Статус:[^\n]*\n?/g, '').replace(/Проверен:[^\n]*\n?/g, '').trim(),
+            guardLevel, status, markerSize: 40, lastVisitDate: null
+          }, { silent: true });
+          added++;
+        });
+        updateCount();
+        if (added) {
+          const group = L.featureGroup(markersLayer.getLayers());
+          map.fitBounds(group.getBounds().pad(0.15));
+        }
+        alert(`Импортировано: ${added}`);
+      } catch(err) { alert('Ошибка KML: ' + err.message); }
+    };
+    r.readAsText(file);
+    $('kmlFileInput').value = '';
+    panel.classList.remove('open');
+  });
+
+  // ===== Share link (URL hash, без фото) =====
+  $('shareBtn').onclick = () => {
+    try {
+      const data = { markers: markersData.map(m => ({ ...m, photos: [] })) };
+      const json = JSON.stringify(data);
+      const b64 = btoa(unescape(encodeURIComponent(json)));
+      const base = location.origin + location.pathname;
+      const url = base + '#data=' + b64;
+      if (url.length > 8000) {
+        alert('Слишком много объектов для ссылки. Используйте «Сохранить» (JSON-файл).');
+        return;
+      }
+      if (navigator.share) {
+        navigator.share({ title: 'Карта объектов', url: url }).catch(() => {});
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => alert('Ссылка скопирована!')).catch(() => prompt('Скопируйте ссылку:', url));
+      } else {
+        prompt('Скопируйте ссылку:', url);
+      }
+      panel.classList.remove('open');
+    } catch(err) { alert('Ошибка: ' + err.message); }
+  };
+
+  function loadFromHash() {
+    if (!location.hash.startsWith('#data=')) return;
+    try {
+      const b64 = location.hash.slice(6);
+      const json = decodeURIComponent(escape(atob(b64)));
+      const data = JSON.parse(json);
+      if (data.markers && Array.isArray(data.markers)) {
+        data.markers.forEach(m => addMarker(m, { silent: true }));
+        updateCount();
+        if (markersData.length) {
+          const group = L.featureGroup(markersLayer.getLayers());
+          map.fitBounds(group.getBounds().pad(0.15));
+        }
+      }
+    } catch(err) { console.warn('Ошибка загрузки из URL:', err); }
+  }
+
+  // ===== ONLINE SYNC =====
+  const PASTE_API = 'https://paste.rs';
+  const IS_FILE = location.protocol === 'file:';
+
+  function setOnlineStatus(text, type) {
+    const el = $('onlineStatus');
+    el.textContent = text;
+    el.classList.remove('connected', 'error', 'warn');
+    if (type) el.classList.add(type);
+  }
+
+  function getOnlinePayload() {
+    return {
+      app: 'abandoned-map',
+      v: 3,
+      markers: markersData.map(m => ({
+        id: m.id, lat: m.lat, lng: m.lng,
+        name: m.name, description: m.description,
+        status: m.status, guardLevel: m.guardLevel,
+        markerSize: m.markerSize, lastVisitDate: m.lastVisitDate
+      })),
+      updatedAt: Date.now()
+    };
+  }
+
+  async function createShared() {
+    if (IS_FILE) {
+      setOnlineStatus('Нельзя создать общую карту из локального файла. См. предупреждение выше.', 'error');
+      return;
+    }
+    try {
+      setOnlineStatus('Создание общей карты...', null);
+      const res = await fetch(PASTE_API + '/', {
+        method: 'POST',
+        body: JSON.stringify(getOnlinePayload())
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const url = (await res.text()).trim();
+      if (!/^https?:\/\//.test(url)) throw new Error('Некорректный ответ сервера');
+      sharedUrl = url;
+      localStorage.setItem('sharedUrl', url);
+      setOnlineStatus('Карта создана! Отправьте ссылку другу — он увидит те же объекты.', 'connected');
+      $('sharedUrlText').textContent = url;
+      updateOnlineUI();
+      startSyncTimer();
+    } catch(err) {
+      console.error(err);
+      const msg = err.message.includes('Failed to fetch') || err.message.includes('NetworkError')
+        ? 'Не удаётся связаться с сервером. Проверьте интернет или откройте сайт через хостинг.'
+        : err.message;
+      setOnlineStatus('Ошибка: ' + msg, 'error');
+    }
+  }
+
+  async function joinShared(input) {
+    if (IS_FILE) {
+      setOnlineStatus('Нельзя подключиться из локального файла. См. предупреждение выше.', 'error');
+      return;
+    }
+    input = (input || '').trim();
+    if (!input) return;
+    let url = input;
+    if (!/^https?:\/\//.test(url)) {
+      url = PASTE_API + '/' + url.replace(/^\//, '');
+    }
+    try {
+      setOnlineStatus('Загрузка данных...', null);
+      const res = await fetch(url, { cache: 'no-cache' });
+      if (!res.ok) throw new Error('HTTP ' + res.status + ' (ссылка не найдена)');
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); }
+      catch(e) { throw new Error('Данные повреждены (не JSON)'); }
+      if (!data.markers || !Array.isArray(data.markers)) throw new Error('Нет поля markers');
+      applyOnlineData(data);
+      sharedUrl = url;
+      localStorage.setItem('sharedUrl', url);
+      setOnlineStatus('Подключено. Теперь вы видите общую карту.', 'connected');
+      $('sharedUrlText').textContent = url;
+      updateOnlineUI();
+      startSyncTimer();
+    } catch(err) {
+      console.error(err);
+      const msg = err.message.includes('Failed to fetch') || err.message.includes('NetworkError')
+        ? 'Не удаётся связаться с сервером. Проверьте интернет или откройте сайт через хостинг.'
+        : err.message;
+      setOnlineStatus('Ошибка: ' + msg, 'error');
+    }
+  }
+
+  function applyOnlineData(data) {
+    if (!data || !Array.isArray(data.markers)) return;
+    markersLayer.clearLayers();
+    markersData = [];
+    data.markers.forEach(m => addMarker(m, { silent: true }));
+    updateCount();
+  }
+
+  async function pushToShared() {
+    if (!sharedUrl || IS_FILE) return;
+    try {
+      const res = await fetch(sharedUrl, {
+        method: 'PUT',
+        body: JSON.stringify(getOnlinePayload())
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+    } catch(err) {
+      console.warn('push failed:', err);
+    }
+  }
+
+  async function pullFromShared() {
+    if (!sharedUrl || IS_FILE) return;
+    try {
+      const res = await fetch(sharedUrl, { cache: 'no-cache' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && Array.isArray(data.markers)) {
+        applyOnlineData(data);
+      }
+    } catch(err) {
+      console.warn('pull failed:', err);
+    }
+  }
+
+  let syncDebounce = null;
+  function scheduleSync() {
+    if (!sharedUrl || IS_FILE) return;
+    clearTimeout(syncDebounce);
+    syncDebounce = setTimeout(() => pushToShared(), 1500);
+  }
+
+  function startSyncTimer() {
+    if (syncTimer) clearInterval(syncTimer);
+    syncTimer = setInterval(() => pullFromShared(), SYNC_INTERVAL);
+  }
+  function stopSyncTimer() {
+    if (syncTimer) clearInterval(syncTimer);
+    syncTimer = null;
+  }
+
+  function updateOnlineUI() {
+    if (sharedUrl) {
+      $('onlineIdle').style.display = 'none';
+      $('onlineActive').style.display = 'flex';
+      $('onlineBtn').classList.add('active');
+      if (!$('onlineBtn').querySelector('.dot')) {
+        const d = document.createElement('span');
+        d.className = 'dot';
+        $('onlineBtn').appendChild(d);
+      }
+      $('onlineBtnText').textContent = 'Общая карта (подключено)';
+    } else {
+      $('onlineIdle').style.display = 'flex';
+      $('onlineActive').style.display = 'none';
+      $('onlineBtn').classList.remove('active');
+      const d = $('onlineBtn').querySelector('.dot');
+      if (d) d.remove();
+      $('onlineBtnText').textContent = 'Общая карта (онлайн)';
+    }
+  }
+
+  $('onlineBtn').onclick = () => {
+    onlineModal.classList.add('show');
+    panel.classList.remove('open');
+    if (IS_FILE) {
+      $('fileWarn').style.display = 'block';
+    } else {
+      $('fileWarn').style.display = 'none';
+    }
+  };
+  $('closeOnline').onclick = () => onlineModal.classList.remove('show');
+
+  $('createSharedBtn').onclick = createShared;
+  $('joinSharedBtn').onclick = () => joinShared($('joinSharedInput').value);
+  $('syncNowBtn').onclick = async () => {
+    if (IS_FILE) { setOnlineStatus('Недоступно из локального файла.', 'error'); return; }
+    await pushToShared();
+    await pullFromShared();
+    setOnlineStatus('Синхронизировано.', 'connected');
+  };
+  $('copyShareLinkBtn').onclick = () => {
+    if (!sharedUrl) return;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(sharedUrl).then(() => alert('Ссылка скопирована!')).catch(() => prompt('Скопируйте ссылку:', sharedUrl));
+    } else {
+      prompt('Скопируйте ссылку:', sharedUrl);
+    }
+  };
+  $('disconnectBtn').onclick = () => {
+    sharedUrl = null;
+    localStorage.removeItem('sharedUrl');
+    stopSyncTimer();
+    setOnlineStatus('Отключено.', null);
+    $('sharedUrlText').textContent = '';
+    updateOnlineUI();
+  };
+
+  // ===== Escape & keyboard =====
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (lightbox.classList.contains('show')) { closeLightbox(); return; }
+      if (formModal.classList.contains('show')) { closeForm(); return; }
+      if (panoramaModal.classList.contains('show')) { panoramaModal.classList.remove('show'); return; }
+      if (onlineModal.classList.contains('show')) { onlineModal.classList.remove('show'); return; }
+      if (addMarkerMode) disableAddMode();
+      panel.classList.remove('open');
+    }
+    if (lightbox.classList.contains('show')) {
+      if (e.key === 'ArrowRight') { lightboxNextPhoto(); e.preventDefault(); }
+      else if (e.key === 'ArrowLeft') { lightboxPrevPhoto(); e.preventDefault(); }
+    }
+  });
+
+  // ===== Default objects (только те, что давал пользователь) =====
+  const DEFAULTS = [
+    { lat: 51.711645, lng: 36.160852, name: 'Бомбоубежища (ККЗ)', description: 'Состояние 0/10, хабар 0/10', guardLevel: 0, status: 'unchecked', markerSize: 40, lastVisitDate: null },
+    { lat: 51.700106, lng: 36.159246, name: 'Бомбоубежища (#505)', description: 'Состояние 1/10, хабар 0/10', guardLevel: 1, status: 'unchecked', markerSize: 40, lastVisitDate: null },
+    { lat: 51.666421, lng: 36.128328, name: 'Бомбоубежища (#123)', description: 'Состояние 2/10, хабар 1/10', guardLevel: 1, status: 'unchecked', markerSize: 40, lastVisitDate: null },
+    { lat: 51.722252, lng: 36.172905, name: 'Поддомник', description: '', guardLevel: 0, status: 'unchecked', markerSize: 40, lastVisitDate: null },
+    { lat: 51.747508, lng: 36.193444, name: 'Поддомник', description: '', guardLevel: 1, status: 'unchecked', markerSize: 40, lastVisitDate: null },
+    { lat: 51.745316, lng: 36.224563, name: 'РЖД бомбоубежища #573', description: 'Состояние 4/10, хабар 0/10', guardLevel: 1, status: 'unchecked', markerSize: 40, lastVisitDate: null },
+    { lat: 51.730916, lng: 36.261954, name: 'АПЗ заброшенное 11-этажное здание', description: 'Состояние 3/10, хабар 0/10', guardLevel: 3, status: 'free', markerSize: 40, lastVisitDate: null }
+  ];
+
+  function loadDefaults() {
+    if (markersData.length > 0) return;
+    DEFAULTS.forEach(obj => addMarker(obj, { silent: true }));
+    updateCount();
+  }
+
+  // ===== Start =====
+  loadDefaults();
+  loadFromHash();
+  updateCount();
+  updateOnlineUI();
+
+  const savedUrl = localStorage.getItem('sharedUrl');
+  if (savedUrl && !IS_FILE && !location.hash.startsWith('#data=')) {
+    sharedUrl = savedUrl;
+    $('sharedUrlText').textContent = savedUrl;
+    updateOnlineUI();
+    setOnlineStatus('Подключено (сохранённая сессия).', 'connected');
+    startSyncTimer();
+    pullFromShared();
+  }
+
+})();
+</script>
 </body>
-</html>
+  </html>
